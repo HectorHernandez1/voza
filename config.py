@@ -6,10 +6,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 
 WHISPER_MODEL = os.getenv("WHISPER_MODEL", "whisper-1")
-CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-20250514")
+CLEANUP_MODEL = os.getenv("CLEANUP_MODEL", "gpt-5-nano")
 CLEANUP_STYLE = os.getenv("CLEANUP_STYLE", "moderate")
 INJECT_METHOD = os.getenv("INJECT_METHOD", "clipboard")
 
@@ -21,7 +20,7 @@ PASTE_DELAY = float(os.getenv("PASTE_DELAY", "0.4"))
 SAMPLE_RATE = 16000
 CHANNELS = 1
 
-CLAUDE_SYSTEM_PROMPT = """\
+CLEANUP_SYSTEM_PROMPT = """\
 You are a voice-to-text cleanup assistant. You receive raw transcriptions from Whisper and return a cleaned version ready to paste directly into any application.
 
 RULES:
@@ -46,12 +45,7 @@ RULES:
 
 
 def validate():
-    missing = []
     if not OPENAI_API_KEY:
-        missing.append("OPENAI_API_KEY")
-    if not ANTHROPIC_API_KEY:
-        missing.append("ANTHROPIC_API_KEY")
-    if missing:
-        print(f"Error: Missing required environment variables: {', '.join(missing)}")
-        print("Please set them in your .env file. See .env.example for reference.")
+        print("Error: Missing required environment variable: OPENAI_API_KEY")
+        print("Please set it in your .env file. See .env.example for reference.")
         sys.exit(1)

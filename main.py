@@ -74,10 +74,10 @@ def _process_audio(audio_path: str):
             return
 
         try:
-            # Stage 2: Claude cleanup
+            # Stage 2: GPT cleanup
             cleaned_text = enhance(raw_text)
         except Exception as e:
-            print(f"Warning: Claude cleanup failed ({e}). Using raw transcript.")
+            print(f"Warning: Cleanup failed ({e}). Using raw transcript.")
             cleaned_text = raw_text
 
         # Stage 3: Inject into active app
@@ -123,7 +123,7 @@ def main():
     print(f"  Record:  {config.HOTKEY_RECORD}")
     print(f"  Quit:    {config.HOTKEY_QUIT}")
     print(f"  Whisper: {config.WHISPER_MODEL}")
-    print(f"  Claude:  {config.CLAUDE_MODEL}")
+    print(f"  Cleanup: {config.CLEANUP_MODEL}")
     print("=" * 50)
     print()
     print("Voza is running. Press {} to start dictating. Press {} to quit.".format(
