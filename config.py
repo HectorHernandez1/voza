@@ -8,7 +8,7 @@ load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 
 WHISPER_MODEL = os.getenv("WHISPER_MODEL", "whisper-1")
-CLEANUP_MODEL = os.getenv("CLEANUP_MODEL", "gpt-5-nano")
+CLEANUP_MODEL = os.getenv("CLEANUP_MODEL", "gpt-5-mini")
 CLEANUP_STYLE = os.getenv("CLEANUP_STYLE", "moderate")
 INJECT_METHOD = os.getenv("INJECT_METHOD", "clipboard")
 

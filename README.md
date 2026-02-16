@@ -23,10 +23,10 @@ cp .env.example .env
 python main.py
 ```
 
-- **Ctrl+Shift+Space** — Start/stop recording
+- **Hold Ctrl+Shift+Space** — Push-to-talk (hold to record, release to process)
 - **Ctrl+Shift+Q** — Quit
 
-Switch to any app, press the hotkey, speak, press the hotkey again. The cleaned text gets pasted into the focused app.
+Switch to any app, hold the hotkey, speak, then release. The cleaned text gets pasted into the focused app.
 
 ## macOS Permissions
 
@@ -38,7 +38,7 @@ Go to **System Settings > Privacy & Security > Accessibility** and grant access 
 
 1. Global hotkey triggers microphone recording
 2. Audio is sent to the OpenAI Whisper API for transcription
-3. Raw transcript is sent to OpenAI GPT (gpt-5-nano) to remove filler words, fix punctuation, and clean up the text
+3. Raw transcript is sent to OpenAI GPT (gpt-5-mini) to remove filler words, fix punctuation, and clean up the text
 4. Cleaned text is copied to the clipboard and pasted via simulated Cmd+V
 
 Supports English, Spanish, and mixed-language dictation.

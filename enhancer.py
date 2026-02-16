@@ -15,13 +15,17 @@ def enhance(raw_text: str) -> str:
         try:
             response = client.chat.completions.create(
                 model=CLEANUP_MODEL,
-                max_tokens=256,
+                max_completion_tokens=256,
                 messages=[
                     {"role": "system", "content": CLEANUP_SYSTEM_PROMPT},
                     {"role": "user", "content": raw_text},
                 ],
             )
-            return response.choices[0].message.content
+            result = response.choices[0].message.content
+            if result and result.strip():
+                return result
+            # Model returned empty content — fall back to raw text
+            return raw_text
         except Exception as e:
             last_error = e
             if attempt == 0:
