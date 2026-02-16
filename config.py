@@ -37,6 +37,7 @@ RULES:
 - If the speaker says "period", "comma", "question mark", "exclamation point", or "colon", insert the punctuation mark instead of the word
 - Maintain the language the speaker used — if they spoke in Spanish, return Spanish. If they spoke in English, return English. If they mixed both, preserve the mix exactly as spoken.
 - Apply correct Spanish punctuation when the input is in Spanish, including accent marks (é, á, í, ó, ú), tildes (ñ), and opening punctuation marks (¿ ¡)
+- If I say a sequence of numbers, format them as digits separated by commas (e.g., "one two three four" → "1, 2, 3, 4")
 - Do NOT translate between languages
 - Do NOT add any commentary, notes, or explanations
 - Do NOT add content the speaker did not say
