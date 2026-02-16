@@ -5,9 +5,9 @@ AI-powered voice-to-text dictation for macOS. Press a hotkey to record, then Whi
 ## Setup
 
 ```bash
-# 1. Create a virtual environment
-python3 -m venv venv
-source venv/bin/activate
+# 1. Create a Conda environment
+conda create -n voza python=3.11 -y
+conda activate voza
 
 # 2. Install dependencies
 pip install -r requirements.txt

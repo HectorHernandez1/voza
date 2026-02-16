@@ -15,7 +15,7 @@ INJECT_METHOD = os.getenv("INJECT_METHOD", "clipboard")
 HOTKEY_RECORD = os.getenv("HOTKEY_RECORD", "ctrl+shift+space")
 HOTKEY_QUIT = os.getenv("HOTKEY_QUIT", "ctrl+shift+q")
 
-PASTE_DELAY = float(os.getenv("PASTE_DELAY", "0.4"))
+PASTE_DELAY = float(os.getenv("PASTE_DELAY", "0.15"))
 
 SAMPLE_RATE = 16000
 CHANNELS = 1
