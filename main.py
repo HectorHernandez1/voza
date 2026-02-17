@@ -5,10 +5,12 @@ import os
 import sys
 import threading
 
+import numpy as np
+import sounddevice as sd
 from pynput import keyboard
 
 import config
-from recorder import Recorder
+from recorder import Recorder, _SILENCE_THRESHOLD
 from transcriber import transcribe
 from enhancer import enhance
 from injector import inject
@@ -67,7 +69,45 @@ pressed_keys: set = set()
 
 
 # ---------------------------------------------------------------------------
-# Audio pipeline (unchanged)
+# Mic verification
+# ---------------------------------------------------------------------------
+
+def _check_mic():
+    """Record a short sample to verify the default mic is alive. Exit if dead."""
+    print("  Checking microphone...", end=" ", flush=True)
+    try:
+        duration = 0.5  # half-second test
+        audio = sd.rec(
+            int(config.SAMPLE_RATE * duration),
+            samplerate=config.SAMPLE_RATE,
+            channels=config.CHANNELS,
+            dtype="int16",
+        )
+        sd.wait()
+    except Exception as e:
+        print(f"\n\n  ERROR: Could not access microphone: {e}")
+        print("  Please check that a microphone is connected and permissions are granted.")
+        print("  Then restart the app.\n")
+        sys.exit(1)
+
+    peak = int(np.max(np.abs(audio)))
+    if peak < _SILENCE_THRESHOLD:
+        print(f"SILENT (peak={peak})")
+        print()
+        print("  WARNING: Microphone appears dead or muted.")
+        print("  Possible fixes:")
+        print("    1. Check that your mic is not muted in System Settings > Sound > Input")
+        print("    2. Run: sudo killall coreaudiod  (resets the audio daemon)")
+        print("    3. Unplug and replug your microphone")
+        print("  Then restart the app.")
+        print()
+        sys.exit(1)
+    else:
+        print(f"OK (peak={peak})")
+
+
+# ---------------------------------------------------------------------------
+# Audio pipeline
 # ---------------------------------------------------------------------------
 
 def _process_audio(audio_path: str):
@@ -121,6 +161,7 @@ def _cleanup(audio_path: str):
 
 def main():
     config.validate()
+    _check_mic()
 
     record_combo = _parse_combo(config.HOTKEY_RECORD)
     quit_combo = _parse_combo(config.HOTKEY_QUIT)
