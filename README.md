@@ -1,6 +1,6 @@
 # Voza — AI-Powered Voice-to-Text for macOS
 
-AI-powered voice-to-text dictation for macOS. Press a hotkey to record, then Whisper transcribes and GPT cleans up your speech before pasting it into the active app.
+AI-powered push-to-talk dictation for macOS. Hold a hotkey to record, then Whisper transcribes and GPT cleans up your speech before pasting it into the active app.
 
 ## Setup
 
@@ -20,6 +20,13 @@ cp .env.example .env
 ## Usage
 
 ```bash
+./start.sh
+```
+
+Or manually:
+
+```bash
+conda activate voza
 python main.py
 ```
 

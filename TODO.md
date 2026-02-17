@@ -2,23 +2,35 @@
 
 ## Setup
 
-- [ ] Create Python virtual environment (`python3 -m venv venv && source venv/bin/activate`)
-- [ ] Install dependencies (`pip install -r requirements.txt`)
-- [ ] Configure API keys — copy `.env.example` to `.env` and add real OPENAI_API_KEY and ANTHROPIC_API_KEY
+- [x] Create Conda environment (`conda create -n voza python=3.11 -y && conda activate voza`)
+- [x] Install dependencies (`pip install -r requirements.txt`)
+- [x] Configure API keys — copy `.env.example` to `.env` and add real OPENAI_API_KEY
 - [ ] Grant Accessibility permissions to Terminal app (System Settings > Privacy & Security > Accessibility)
 
 ## Testing
 
-- [ ] Run `python main.py` and confirm startup message prints
-- [ ] Hotkey works when another app is in focus
-- [ ] Audio records correctly from the default mic
-- [ ] Whisper transcribes English correctly
+- [x] Run `python main.py` and confirm startup message prints
+- [x] Hotkey works when another app is in focus
+- [x] Audio records correctly from the default mic
+- [x] Whisper transcribes English correctly
 - [ ] Whisper transcribes Spanish correctly
-- [ ] Claude removes filler words without changing meaning
-- [ ] Claude preserves technical terms and code references
-- [ ] Claude handles Spanish text with correct accents and punctuation
-- [ ] Claude handles mixed English/Spanish without translating
-- [ ] Cleaned text is pasted into the focused app via clipboard
+- [x] GPT (gpt-5-mini) removes filler words without changing meaning
+- [ ] GPT preserves technical terms and code references
+- [ ] GPT handles Spanish text with correct accents and punctuation
+- [ ] GPT handles mixed English/Spanish without translating
+- [x] Cleaned text is pasted into the focused app via clipboard
 - [ ] Error handling works when APIs are unreachable
-- [ ] App exits cleanly on Ctrl+Shift+Q
+- [x] App exits cleanly on Ctrl+Shift+Q
 - [ ] Works on macOS with Intel processor
+
+## Completed Improvements
+
+- [x] Push-to-talk (hold to record, release to stop) — replaced toggle hotkey
+- [x] Shared OpenAI client — eliminates cold-start latency
+- [x] Reduced retry delays (2s → 1s)
+- [x] Max completion tokens cap (256) on cleanup calls
+- [x] Reduced paste delay (0.4s → 0.15s)
+- [x] Short-phrase bypass — skips GPT cleanup for ≤10 words
+- [x] Upgraded cleanup model from gpt-5-nano → gpt-5-mini
+- [x] Empty response guard — falls back to raw transcript
+- [x] Launch script (`start.sh`) with auto-restart on crash
