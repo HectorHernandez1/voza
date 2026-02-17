@@ -6,6 +6,8 @@ import sounddevice as sd
 
 from config import SAMPLE_RATE, CHANNELS
 
+_SILENCE_THRESHOLD = 100  # peak amplitude below this = mic is silent/dead
+
 
 class Recorder:
     def __init__(self):
