@@ -34,3 +34,12 @@
 - [x] Upgraded cleanup model from gpt-5-nano → gpt-5-mini
 - [x] Empty response guard — falls back to raw transcript
 - [x] Launch script (`start.sh`) with auto-restart on crash
+
+## Future Improvements — Code Mode
+
+- [ ] **Mode toggle hotkey** — second hotkey to switch between prose mode and code mode
+- [ ] **Code-aware cleanup prompt** — system prompt tuned for code syntax (e.g., "def my function open paren x close paren" → `def my_function(x):`)
+- [ ] **Code vocabulary** — snake_case/camelCase commands, operator dictation ("equals equals" → `==`), bracket/paren commands
+- [ ] **Indentation control** — voice commands for indent/dedent/new block
+- [ ] **Target app detection** — auto-switch to code mode when an IDE (VS Code, Xcode) is focused
+- [ ] **Streaming output** — use OpenAI streaming API to paste tokens as they arrive for faster feedback
