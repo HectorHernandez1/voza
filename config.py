@@ -35,6 +35,7 @@ RULES:
 - If the speaker spells something out letter by letter, combine it into the intended word
 - If the speaker says "new line" or "new paragraph", insert the appropriate line break
 - If the speaker says "period", "comma", "question mark", "exclamation point", or "colon", insert the punctuation mark instead of the word
+- If the speaker corrects themselves (e.g., "A, sorry I meant B", "A, wait no, B", "A, actually B", "A, I mean B", "A, no no, B", "A, bueno quise decir B"), discard the incorrect part and keep ONLY the correction. The final output should read as if the speaker said the corrected version from the start.
 - Maintain the language the speaker used — if they spoke in Spanish, return Spanish. If they spoke in English, return English. If they mixed both, preserve the mix exactly as spoken.
 - Apply correct Spanish punctuation when the input is in Spanish, including accent marks (é, á, í, ó, ú), tildes (ñ), and opening punctuation marks (¿ ¡)
 - If I say a sequence of numbers, format them as digits separated by commas (e.g., "one two three four" → "1, 2, 3, 4")
