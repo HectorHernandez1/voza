@@ -110,6 +110,14 @@ def _check_mic():
 # Audio pipeline
 # ---------------------------------------------------------------------------
 
+# Known Whisper hallucination outputs from silent/bad audio
+_HALLUCINATION_WORDS = {
+    "you", "the", "a", "i", "thank you", "thanks",
+    "bye", "goodbye", "yeah", "yes", "no", "okay",
+    "so", "and", "but", "or", "it", "he", "she",
+}
+
+
 def _process_audio(audio_path: str):
     """Run the Whisper → GPT → paste pipeline."""
     with processing_lock:
@@ -121,6 +129,15 @@ def _process_audio(audio_path: str):
             print(f"  [Whisper] {raw_text}")
         except Exception as e:
             print(f"Error: Whisper transcription failed: {e}")
+            _cleanup(audio_path)
+            print("Ready.")
+            return
+
+        # Guard against Whisper hallucinations from silent/bad audio
+        stripped = raw_text.strip().strip(".!?,").lower()
+        if stripped in _HALLUCINATION_WORDS:
+            print("  [Warning] Likely mic issue — transcript looks like a hallucination.")
+            print("  Check your audio input device. Skipping paste.")
             _cleanup(audio_path)
             print("Ready.")
             return
@@ -194,7 +211,13 @@ def main():
             pressed_keys.discard(key)
 
             if audio_path is None:
-                print("No audio captured (too short). Ready.")
+                reason = recorder.last_stop_reason
+                if reason == "silent":
+                    print("  Mic appears silent/dead. Check your input device.")
+                    print("  Try: System Settings > Sound > Input, or restart the app.")
+                else:
+                    print("  No audio captured (too short).")
+                print("Ready.")
                 return
 
             threading.Thread(

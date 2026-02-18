@@ -15,6 +15,12 @@ class Recorder:
         self._recording = False
         self._stream = None
         self._lock = threading.Lock()
+        self._last_stop_reason = None
+
+    @property
+    def last_stop_reason(self):
+        """Why the last stop() returned None: 'silent', 'short', or None (success)."""
+        return self._last_stop_reason
 
     @property
     def is_recording(self):
@@ -50,15 +56,24 @@ class Recorder:
                 self._stream = None
 
         if not self._frames:
+            self._last_stop_reason = "short"
             return None
 
         audio = np.concatenate(self._frames, axis=0)
 
+        # Check if audio is essentially silent (dead/wrong mic)
+        peak = int(np.max(np.abs(audio)))
+        if peak < _SILENCE_THRESHOLD:
+            self._last_stop_reason = "silent"
+            return None
+
         # If less than 0.3 seconds of audio, treat as accidental press
         min_samples = int(SAMPLE_RATE * 0.3)
         if len(audio) < min_samples:
+            self._last_stop_reason = "short"
             return None
 
+        self._last_stop_reason = None
         return self._save_wav(audio)
 
     def _save_wav(self, audio: np.ndarray) -> str:
