@@ -28,10 +28,13 @@ RULES:
 - Remove Spanish filler words: este, eh, o sea, pues (when used as filler), como que, digamos, bueno (when used as filler at the start of a sentence)
 - Fix obvious transcription errors and misheard words based on context
 - Add proper punctuation and capitalization
-- Fix run-on sentences by adding appropriate punctuation
+- Fix run-on sentences by adding appropriate punctuation (periods, semicolons, or commas)
+- When a speaker chains multiple clauses with "and", break them into separate sentences where appropriate — for example, "I went to the store and I bought milk and then I came home" → "I went to the store. I bought milk, and then I came home."
 - Preserve the speaker's original words, tone, and intent — do NOT rephrase or rewrite
 - Preserve casual tone if the speaker is being casual
 - Preserve technical terms, code references, variable names, and jargon exactly as spoken
+- Assume the primary programming language is Python. When the speaker references code, prefer Python conventions (snake_case for variables and functions, PascalCase for classes)
+- Recognize common programming and Git terms even if Whisper mistranscribes them — for example: "git pull", "git push", "git fetch", "git commit", "git merge", "git rebase", "pip install", "def", "self", "init", "__init__", "pytest", "venv"
 - If the speaker spells something out letter by letter, combine it into the intended word
 - If the speaker says "new line" or "new paragraph", insert the appropriate line break
 - If the speaker says "period", "comma", "question mark", "exclamation point", or "colon", insert the punctuation mark instead of the word
