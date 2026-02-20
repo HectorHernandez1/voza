@@ -1,6 +1,8 @@
 import os
 import sys
 
+import sounddevice as sd
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -19,6 +21,81 @@ PASTE_DELAY = float(os.getenv("PASTE_DELAY", "0.15"))
 
 SAMPLE_RATE = 16000
 CHANNELS = 1
+
+# Audio device — set to device name (partial match), index number, or "auto".
+# "auto" (default) probes all mics and picks the loudest one.
+_AUDIO_DEVICE_RAW = os.getenv("AUDIO_DEVICE", "auto")
+
+
+def _probe_best_device():
+    """Record a short sample on every input device and return the index with the highest peak."""
+    import numpy as np
+
+    devs = sd.query_devices()
+    best_idx = None
+    best_peak = -1
+    best_name = ""
+
+    # Skip iOS devices that appear via Continuity — they cause long hangs
+    _skip = {"iphone", "ipad"}
+
+    for i, d in enumerate(devs):
+        if d['max_input_channels'] < 1:
+            continue
+        if any(s in d['name'].lower() for s in _skip):
+            continue
+        try:
+            audio = sd.rec(
+                int(SAMPLE_RATE * 0.3),
+                samplerate=SAMPLE_RATE,
+                channels=CHANNELS,
+                dtype="int16",
+                device=i,
+            )
+            sd.wait()
+            peak = int(np.max(np.abs(audio)))
+            if peak > best_peak:
+                best_peak = peak
+                best_idx = i
+                best_name = d['name']
+        except Exception:
+            continue  # skip devices that error out
+
+    if best_idx is not None:
+        print(f"  Auto-detected mic: [{best_idx}] {best_name} (peak={best_peak})")
+    return best_idx
+
+
+def _resolve_audio_device():
+    """Resolve AUDIO_DEVICE env var to a device index, or auto-detect the best mic."""
+    raw = _AUDIO_DEVICE_RAW.strip().lower()
+
+    # Auto-detect: probe all devices and pick the loudest
+    if not raw or raw == "auto":
+        return _probe_best_device()
+
+    # Try as integer index first
+    try:
+        idx = int(raw)
+        dev = sd.query_devices(idx)
+        if dev['max_input_channels'] > 0:
+            return idx
+        print(f"  Warning: Device [{idx}] has no input channels. Falling back to auto-detect.")
+        return _probe_best_device()
+    except (ValueError, sd.PortAudioError):
+        pass
+
+    # Try as name substring match
+    devs = sd.query_devices()
+    for i, d in enumerate(devs):
+        if d['max_input_channels'] > 0 and raw in d['name'].lower():
+            return i
+
+    print(f"  Warning: No input device matching '{_AUDIO_DEVICE_RAW.strip()}'. Falling back to auto-detect.")
+    return _probe_best_device()
+
+
+AUDIO_DEVICE = _resolve_audio_device()
 
 CLEANUP_SYSTEM_PROMPT = """\
 You are a voice-to-text cleanup assistant. You receive raw transcriptions from Whisper and return a cleaned version ready to paste directly into any application.

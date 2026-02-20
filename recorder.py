@@ -4,7 +4,7 @@ import threading
 import numpy as np
 import sounddevice as sd
 
-from config import SAMPLE_RATE, CHANNELS
+from config import SAMPLE_RATE, CHANNELS, AUDIO_DEVICE
 
 _SILENCE_THRESHOLD = 100  # peak amplitude below this = mic is silent/dead
 
@@ -36,6 +36,7 @@ class Recorder:
                 samplerate=SAMPLE_RATE,
                 channels=CHANNELS,
                 dtype="int16",
+                device=AUDIO_DEVICE,
                 callback=self._callback,
             )
             self._stream.start()

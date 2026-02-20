@@ -82,6 +82,7 @@ def _check_mic():
             samplerate=config.SAMPLE_RATE,
             channels=config.CHANNELS,
             dtype="int16",
+            device=config.AUDIO_DEVICE,
         )
         sd.wait()
     except Exception as e:
