@@ -234,6 +234,8 @@ def main():
     print("=" * 50)
     print(f"  Record:  {config.HOTKEY_RECORD} (push-to-talk)")
     print(f"  Quit:    {config.HOTKEY_QUIT}")
+    dev_info = sd.query_devices(config.AUDIO_DEVICE, kind='input')
+    print(f"  Mic:     [{config.AUDIO_DEVICE}] {dev_info['name']}")
     print(f"  Whisper: {config.WHISPER_MODEL}")
     print(f"  Cleanup: {config.CLEANUP_MODEL}")
     print("=" * 50)
