@@ -11,6 +11,7 @@ def inject(text: str):
         ["pbcopy"],
         input=text.encode("utf-8"),
         check=True,
+        stderr=subprocess.DEVNULL,
     )
 
     # Wait for the previously focused app to be ready
@@ -24,4 +25,5 @@ def inject(text: str):
             'tell application "System Events" to keystroke "v" using command down',
         ],
         check=True,
+        stderr=subprocess.DEVNULL,
     )

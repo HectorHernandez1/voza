@@ -9,22 +9,22 @@ load_dotenv()
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 
-WHISPER_MODEL = os.getenv("WHISPER_MODEL", "whisper-1")
-CLEANUP_MODEL = os.getenv("CLEANUP_MODEL", "gpt-5-mini")
-CLEANUP_STYLE = os.getenv("CLEANUP_STYLE", "moderate")
-INJECT_METHOD = os.getenv("INJECT_METHOD", "clipboard")
+WHISPER_MODEL = "whisper-1"
+CLEANUP_MODEL = "gpt-5-mini"
+CLEANUP_STYLE = "moderate"
+INJECT_METHOD = "clipboard"
 
-HOTKEY_RECORD = os.getenv("HOTKEY_RECORD", "ctrl+shift+space")
-HOTKEY_QUIT = os.getenv("HOTKEY_QUIT", "ctrl+shift+q")
+HOTKEY_RECORD = "ctrl+shift+space"
+HOTKEY_QUIT = "ctrl+shift+q"
 
-PASTE_DELAY = float(os.getenv("PASTE_DELAY", "0.15"))
+PASTE_DELAY = 0.3
 
 SAMPLE_RATE = 16000
 CHANNELS = 1
 
 # Audio device — set to device name (partial match), index number, or "auto".
 # "auto" (default) probes all mics and picks the loudest one.
-_AUDIO_DEVICE_RAW = os.getenv("AUDIO_DEVICE", "auto")
+_AUDIO_DEVICE_RAW = "auto"
 
 
 def _probe_best_device():
