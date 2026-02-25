@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Voza — AI-powered voice-to-text dictation for macOS."""
 
-import os
+
 import sys
 import threading
 
@@ -10,7 +10,7 @@ import sounddevice as sd
 from pynput import keyboard
 
 import config
-from recorder import Recorder, _SILENCE_THRESHOLD
+from recorder import Recorder, _SILENCE_THRESHOLD, _HAS_FFMPEG
 from transcriber import transcribe
 from enhancer import enhance
 from injector import inject
@@ -119,18 +119,17 @@ _HALLUCINATION_WORDS = {
 }
 
 
-def _process_audio(audio_path: str):
+def _process_audio(audio_buffer):
     """Run the Whisper → GPT → paste pipeline."""
     with processing_lock:
         raw_text = None
         cleaned_text = None
 
         try:
-            raw_text = transcribe(audio_path)
+            raw_text = transcribe(audio_buffer)
             print(f"  [Whisper] {raw_text}")
         except Exception as e:
             print(f"Error: Whisper transcription failed: {e}")
-            _cleanup(audio_path)
             print("Ready.")
             return
 
@@ -139,12 +138,11 @@ def _process_audio(audio_path: str):
         if stripped in _HALLUCINATION_WORDS:
             print("  [Warning] Likely mic issue — transcript looks like a hallucination.")
             print("  Check your audio input device. Skipping paste.")
-            _cleanup(audio_path)
             print("Ready.")
             return
 
         # Short phrases don't need GPT cleanup — skip to save time
-        if len(raw_text.split()) <= 10:
+        if len(raw_text.split()) <= 15:
             cleaned_text = raw_text
             print("  [Cleanup] Skipped (short phrase)")
         else:
@@ -161,16 +159,7 @@ def _process_audio(audio_path: str):
             print(f"Error: Failed to paste text: {e}")
             print(f"  Text was: {cleaned_text}")
 
-        _cleanup(audio_path)
         print("Ready.")
-
-
-def _cleanup(audio_path: str):
-    """Remove temporary audio file."""
-    try:
-        os.unlink(audio_path)
-    except OSError:
-        pass
 
 
 # ---------------------------------------------------------------------------
@@ -193,7 +182,7 @@ def main():
         # Quit combo
         if quit_combo <= pressed_keys:
             print("\nQuitting Voza. Goodbye!")
-            os._exit(0)
+            import os as _os; _os._exit(0)
 
         # Record combo — start recording when all keys are held
         if record_combo <= pressed_keys and not recorder.is_recording:
@@ -208,10 +197,10 @@ def main():
         # If we were recording and any key in the combo is released → stop
         if recorder.is_recording and key in record_combo:
             print("Processing...")
-            audio_path = recorder.stop()
+            audio_buffer = recorder.stop()
             pressed_keys.discard(key)
 
-            if audio_path is None:
+            if audio_buffer is None:
                 reason = recorder.last_stop_reason
                 if reason == "silent":
                     print("  Mic appears silent/dead. Check your input device.")
@@ -222,7 +211,7 @@ def main():
                 return
 
             threading.Thread(
-                target=_process_audio, args=(audio_path,), daemon=True
+                target=_process_audio, args=(audio_buffer,), daemon=True
             ).start()
         else:
             pressed_keys.discard(key)
@@ -238,6 +227,8 @@ def main():
     print(f"  Mic:     [{config.AUDIO_DEVICE}] {dev_info['name']}")
     print(f"  Whisper: {config.WHISPER_MODEL}")
     print(f"  Cleanup: {config.CLEANUP_MODEL}")
+    print(f"  Compress: {'OGG/Opus (ffmpeg)' if _HAS_FFMPEG else 'Off (install ffmpeg to enable)'}")
+
     print("=" * 50)
     print()
     print("Hold {} to record, release to process & paste.".format(

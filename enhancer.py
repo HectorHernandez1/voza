@@ -16,6 +16,7 @@ def enhance(raw_text: str) -> str:
             response = client.chat.completions.create(
                 model=CLEANUP_MODEL,
                 max_completion_tokens=256,
+                temperature=0,
                 messages=[
                     {"role": "system", "content": CLEANUP_SYSTEM_PROMPT},
                     {"role": "user", "content": raw_text},

@@ -30,10 +30,13 @@
 - [x] Reduced retry delays (2s → 1s)
 - [x] Max completion tokens cap (256) on cleanup calls
 - [x] Reduced paste delay (0.4s → 0.15s)
-- [x] Short-phrase bypass — skips GPT cleanup for ≤10 words
-- [x] Upgraded cleanup model from gpt-5-nano → gpt-5-mini
+- [x] Short-phrase bypass — skips GPT cleanup for ≤15 words
+- [x] Upgraded cleanup model from gpt-5-nano → gpt-4o-mini
 - [x] Empty response guard — falls back to raw transcript
 - [x] Launch script (`start.sh`) with auto-restart on crash
+- [x] In-memory audio buffers — eliminated temp file disk I/O
+- [x] OGG/Opus compression via ffmpeg (falls back to WAV if ffmpeg unavailable)
+- [x] Deterministic decoding (temperature=0) on cleanup calls
 
 ## Future Improvements — Code Mode
 

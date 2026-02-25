@@ -1,5 +1,8 @@
-import tempfile
+import io
+import shutil
+import subprocess
 import threading
+import wave
 
 import numpy as np
 import sounddevice as sd
@@ -7,6 +10,9 @@ import sounddevice as sd
 from config import SAMPLE_RATE, CHANNELS, AUDIO_DEVICE
 
 _SILENCE_THRESHOLD = 100  # peak amplitude below this = mic is silent/dead
+
+# Check once at import time whether ffmpeg is available for OGG compression
+_HAS_FFMPEG = shutil.which("ffmpeg") is not None
 
 
 class Recorder:
@@ -46,7 +52,7 @@ class Recorder:
             self._frames.append(indata.copy())
 
     def stop(self):
-        """Stop recording and return path to a temporary WAV file, or None if too short."""
+        """Stop recording and return an in-memory audio buffer, or None if too short."""
         with self._lock:
             if not self._recording:
                 return None
@@ -75,15 +81,50 @@ class Recorder:
             return None
 
         self._last_stop_reason = None
-        return self._save_wav(audio)
+        return self._to_audio_buffer(audio)
 
-    def _save_wav(self, audio: np.ndarray) -> str:
-        import wave
-
-        tmp = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
-        with wave.open(tmp.name, "wb") as wf:
+    def _to_wav_bytes(self, audio: np.ndarray) -> io.BytesIO:
+        """Convert raw audio to an in-memory WAV buffer."""
+        buf = io.BytesIO()
+        with wave.open(buf, "wb") as wf:
             wf.setnchannels(CHANNELS)
             wf.setsampwidth(2)  # 16-bit = 2 bytes
             wf.setframerate(SAMPLE_RATE)
             wf.writeframes(audio.tobytes())
-        return tmp.name
+        buf.seek(0)
+        buf.name = "recording.wav"
+        return buf
+
+    def _to_ogg_bytes(self, wav_buf: io.BytesIO) -> io.BytesIO:
+        """Convert WAV buffer to OGG/Opus via ffmpeg for ~90% smaller upload."""
+        try:
+            result = subprocess.run(
+                [
+                    "ffmpeg", "-y",
+                    "-f", "wav", "-i", "pipe:0",
+                    "-c:a", "libopus",
+                    "-b:a", "24k",       # 24kbps is plenty for speech
+                    "-application", "voip",
+                    "-f", "ogg", "pipe:1",
+                ],
+                input=wav_buf.read(),
+                capture_output=True,
+                timeout=5,
+            )
+            if result.returncode == 0 and len(result.stdout) > 0:
+                ogg_buf = io.BytesIO(result.stdout)
+                ogg_buf.name = "recording.ogg"
+                return ogg_buf
+        except (subprocess.TimeoutExpired, Exception):
+            pass
+
+        # Fallback: return the original WAV
+        wav_buf.seek(0)
+        return wav_buf
+
+    def _to_audio_buffer(self, audio: np.ndarray) -> io.BytesIO:
+        """Return the best available in-memory audio buffer (OGG if ffmpeg exists, else WAV)."""
+        wav_buf = self._to_wav_bytes(audio)
+        if _HAS_FFMPEG:
+            return self._to_ogg_bytes(wav_buf)
+        return wav_buf

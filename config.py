@@ -10,14 +10,14 @@ load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 
 WHISPER_MODEL = "whisper-1"
-CLEANUP_MODEL = "gpt-5-mini"
+CLEANUP_MODEL = "gpt-4o-mini"
 CLEANUP_STYLE = "moderate"
 INJECT_METHOD = "clipboard"
 
 HOTKEY_RECORD = "ctrl+shift+space"
 HOTKEY_QUIT = "ctrl+shift+q"
 
-PASTE_DELAY = 0.3
+PASTE_DELAY = 0.15
 
 SAMPLE_RATE = 16000
 CHANNELS = 1
