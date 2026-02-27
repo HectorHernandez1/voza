@@ -19,7 +19,7 @@ def enhance(raw_text: str) -> str:
                 temperature=0,
                 messages=[
                     {"role": "system", "content": CLEANUP_SYSTEM_PROMPT},
-                    {"role": "user", "content": raw_text},
+                    {"role": "user", "content": f"[TRANSCRIPTION]\n{raw_text}\n[/TRANSCRIPTION]"},
                 ],
             )
             result = response.choices[0].message.content
