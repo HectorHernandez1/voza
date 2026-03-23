@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Voza — AI-powered voice-to-text dictation for macOS."""
+"""Voza — AI-powered voice-to-text dictation."""
 
 
 import sys
@@ -97,8 +97,12 @@ def _check_mic():
         print()
         print("  WARNING: Microphone appears dead or muted.")
         print("  Possible fixes:")
-        print("    1. Check that your mic is not muted in System Settings > Sound > Input")
-        print("    2. Run: sudo killall coreaudiod  (resets the audio daemon)")
+        if sys.platform == "darwin":
+            print("    1. Check that your mic is not muted in System Settings > Sound > Input")
+            print("    2. Run: sudo killall coreaudiod  (resets the audio daemon)")
+        else:
+            print("    1. Check that your mic is not muted (e.g., pavucontrol or alsamixer)")
+            print("    2. Run: pulseaudio -k  (restarts PulseAudio)")
         print("    3. Unplug and replug your microphone")
         print("  Then restart the app.")
         print()
@@ -204,7 +208,10 @@ def main():
                 reason = recorder.last_stop_reason
                 if reason == "silent":
                     print("  Mic appears silent/dead. Check your input device.")
-                    print("  Try: System Settings > Sound > Input, or restart the app.")
+                    if sys.platform == "darwin":
+                        print("  Try: System Settings > Sound > Input, or restart the app.")
+                    else:
+                        print("  Try: pavucontrol or alsamixer to check input levels, or restart the app.")
                 else:
                     print("  No audio captured (too short).")
                 print("Ready.")
@@ -236,10 +243,14 @@ def main():
     ))
     print("Press {} to quit.".format(config.HOTKEY_QUIT))
     print()
-    print("NOTE: This app requires macOS Accessibility permissions.")
-    print("If hotkeys don't work, go to:")
-    print("  System Settings > Privacy & Security > Accessibility")
-    print("  and grant access to your Terminal app.")
+    if sys.platform == "darwin":
+        print("NOTE: This app requires macOS Accessibility permissions.")
+        print("If hotkeys don't work, go to:")
+        print("  System Settings > Privacy & Security > Accessibility")
+        print("  and grant access to your Terminal app.")
+    else:
+        print("NOTE: On Wayland, hotkey capture may not work. Use X11 or Xwayland.")
+        print("Required system packages: xclip (or xsel) and xdotool.")
     print()
     print("Ready.")
 
