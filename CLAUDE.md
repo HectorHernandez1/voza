@@ -1,4 +1,4 @@
-# Voza — AI-Powered Voice-to-Text for macOS (Intel)
+# Voza — AI-Powered Voice-to-Text (macOS & Linux)
 
 ## Architecture
 
@@ -15,16 +15,16 @@ Two-stage AI pipeline:
 - `recorder.py` — Microphone capture via sounddevice (16kHz mono int16, saves temp WAV)
 - `transcriber.py` — OpenAI Whisper API client with 1-retry logic
 - `enhancer.py` — OpenAI GPT cleanup (gpt-4o-mini, temperature=0) with bilingual system prompt
-- `injector.py` — pbcopy + osascript Cmd+V paste into focused app
+- `injector.py` — Cross-platform text injection (pbcopy/osascript on macOS, xclip/xdotool on Linux)
 - `config.py` — Loads .env, validates API keys, holds defaults and system prompt
 - `start.sh` — Launch script with auto-restart on crash
 
 ## Key Design Decisions
 
 - **Push-to-talk** — hold hotkey to record, release to stop and process
-- **Clipboard + Cmd+V** for text injection — most reliable cross-app method on macOS
-- **pynput Listener** for system-wide hotkeys with press/release tracking (requires Accessibility permissions)
-- **sounddevice** for audio capture (uses PortAudio, works on Intel Macs)
+- **Clipboard + paste keystroke** for text injection — pbcopy/osascript on macOS, xclip/xdotool on Linux
+- **pynput Listener** for system-wide hotkeys with press/release tracking (macOS: Accessibility permissions; Linux: X11 required)
+- **sounddevice** for audio capture (uses PortAudio, cross-platform)
 - **Background thread** for the Whisper→GPT→paste pipeline so hotkey listener stays responsive
 - **Threading lock** prevents overlapping pipeline runs
 - **Short-phrase bypass** — skips GPT cleanup for ≤15 words to reduce latency
@@ -44,11 +44,46 @@ All config via `.env` file. See `.env.example` for all options. Required key:
 - `Ctrl+Shift+Space` — Push-to-talk (hold to record, release to process)
 - `Ctrl+Shift+Q` — Quit
 
-## macOS Permissions
+## Platform Notes
 
-Requires Accessibility permissions for the terminal app:
-System Settings > Privacy & Security > Accessibility
+### macOS
+- Requires Accessibility permissions: System Settings > Privacy & Security > Accessibility
+
+### Linux
+- Requires X11 (Wayland not supported by pynput for global hotkeys)
+- System packages: `sudo apt install -y xclip xdotool libportaudio2`
 
 ## Dependencies
 
-sounddevice, numpy, pynput, openai, python-dotenv
+**Python:** sounddevice, numpy, pynput, openai, python-dotenv
+
+**System (Linux only):** xclip (or xsel), xdotool, libportaudio2
+
+## Setup
+
+```bash
+# Create conda environment
+conda create -n voza python=3.11 -y --override-channels -c conda-forge
+conda activate voza
+pip install -r requirements.txt
+
+# Linux only — install system packages
+sudo apt install -y xclip xdotool libportaudio2
+```
+
+## Running
+
+```bash
+# Foreground (with auto-restart on crash)
+./start.sh
+
+# Or directly
+conda activate voza
+python main.py
+
+# Background
+conda activate voza
+nohup python main.py > /tmp/voza.log 2>&1 &
+# Check logs: tail -f /tmp/voza.log
+# Stop: kill $(pgrep -f "python main.py")
+```
