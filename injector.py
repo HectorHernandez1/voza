@@ -10,7 +10,7 @@ _IS_MACOS = sys.platform == "darwin"
 # Resolve Linux Wayland tools at import time
 if not _IS_MACOS:
     _HAS_WL_COPY = shutil.which("wl-copy") is not None
-    _HAS_WTYPE = shutil.which("wtype") is not None
+    _HAS_YDOTOOL = shutil.which("ydotool") is not None
 
 
 def inject(text: str):
@@ -46,10 +46,11 @@ def _inject_linux(text: str):
             "wl-copy not found. Install it:\n"
             "  sudo apt install wl-clipboard"
         )
-    if not _HAS_WTYPE:
+    if not _HAS_YDOTOOL:
         raise RuntimeError(
-            "wtype not found. Install it:\n"
-            "  sudo apt install wtype"
+            "ydotool not found. Install it:\n"
+            "  sudo apt install ydotool\n"
+            "  sudo ydotoold &"
         )
 
     subprocess.run(
@@ -60,7 +61,7 @@ def _inject_linux(text: str):
     )
     time.sleep(PASTE_DELAY)
     subprocess.run(
-        ["wtype", "-M", "ctrl", "-P", "v", "-m", "ctrl"],
+        ["ydotool", "key", "ctrl+v"],
         check=True,
         stderr=subprocess.DEVNULL,
     )
