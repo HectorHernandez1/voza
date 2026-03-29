@@ -7,16 +7,10 @@ from config import PASTE_DELAY
 
 _IS_MACOS = sys.platform == "darwin"
 
-# Resolve Linux clipboard/paste tools at import time
+# Resolve Linux Wayland tools at import time
 if not _IS_MACOS:
-    if shutil.which("xclip"):
-        _CLIP_CMD = ["xclip", "-selection", "clipboard"]
-    elif shutil.which("xsel"):
-        _CLIP_CMD = ["xsel", "--clipboard", "--input"]
-    else:
-        _CLIP_CMD = None
-
-    _HAS_XDOTOOL = shutil.which("xdotool") is not None
+    _HAS_WL_COPY = shutil.which("wl-copy") is not None
+    _HAS_WTYPE = shutil.which("wtype") is not None
 
 
 def inject(text: str):
@@ -47,26 +41,26 @@ def _inject_macos(text: str):
 
 
 def _inject_linux(text: str):
-    if _CLIP_CMD is None:
+    if not _HAS_WL_COPY:
         raise RuntimeError(
-            "No clipboard tool found. Install one:\n"
-            "  sudo apt install xclip   (or xsel)"
+            "wl-copy not found. Install it:\n"
+            "  sudo apt install wl-clipboard"
         )
-    if not _HAS_XDOTOOL:
+    if not _HAS_WTYPE:
         raise RuntimeError(
-            "xdotool not found. Install it:\n"
-            "  sudo apt install xdotool"
+            "wtype not found. Install it:\n"
+            "  sudo apt install wtype"
         )
 
     subprocess.run(
-        _CLIP_CMD,
+        ["wl-copy"],
         input=text.encode("utf-8"),
         check=True,
         stderr=subprocess.DEVNULL,
     )
     time.sleep(PASTE_DELAY)
     subprocess.run(
-        ["xdotool", "key", "--clearmodifiers", "ctrl+v"],
+        ["wtype", "-M", "ctrl", "-P", "v", "-m", "ctrl"],
         check=True,
         stderr=subprocess.DEVNULL,
     )

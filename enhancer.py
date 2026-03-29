@@ -1,11 +1,13 @@
 import time
 
 from api_client import client
-from config import CLEANUP_MODEL, CLEANUP_SYSTEM_PROMPT
+from config import VOZA_MODE, CLEANUP_MODEL, LOCAL_CLEANUP_MODEL, CLEANUP_SYSTEM_PROMPT
+
+_MODEL = LOCAL_CLEANUP_MODEL if VOZA_MODE == "local" else CLEANUP_MODEL
 
 
 def enhance(raw_text: str) -> str:
-    """Send raw transcript to GPT for cleanup.
+    """Send raw transcript to LLM for cleanup.
 
     Retries once on failure after a 1-second delay.
     Returns cleaned text, or raises on persistent failure.
@@ -14,7 +16,7 @@ def enhance(raw_text: str) -> str:
     for attempt in range(2):
         try:
             response = client.chat.completions.create(
-                model=CLEANUP_MODEL,
+                model=_MODEL,
                 max_completion_tokens=256,
                 temperature=0,
                 messages=[
@@ -34,4 +36,3 @@ def enhance(raw_text: str) -> str:
                 time.sleep(1)
 
     raise last_error
-

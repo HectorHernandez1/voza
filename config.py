@@ -7,12 +7,17 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+VOZA_MODE = os.getenv("VOZA_MODE", "openai").lower().strip()
+
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 
 WHISPER_MODEL = "whisper-1"
 CLEANUP_MODEL = "gpt-4o-mini"
-CLEANUP_STYLE = "moderate"
-INJECT_METHOD = "clipboard"
+
+# Local mode (whisper-server + Ollama)
+WHISPER_SERVER_URL = os.getenv("WHISPER_SERVER_URL", "http://localhost:8080")
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+LOCAL_CLEANUP_MODEL = os.getenv("LOCAL_CLEANUP_MODEL", "qwen3:8b")
 
 HOTKEY_RECORD = "ctrl+shift+space"
 HOTKEY_QUIT = "ctrl+shift+q"
@@ -128,7 +133,13 @@ RULES:
 
 
 def validate():
-    if not OPENAI_API_KEY:
-        print("Error: Missing required environment variable: OPENAI_API_KEY")
-        print("Please set it in your .env file. See .env.example for reference.")
+    if VOZA_MODE == "openai":
+        if not OPENAI_API_KEY:
+            print("Error: Missing required environment variable: OPENAI_API_KEY")
+            print("Please set it in your .env file. See .env.example for reference.")
+            sys.exit(1)
+    elif VOZA_MODE == "local":
+        pass  # No API key needed; whisper-server and Ollama checked at runtime
+    else:
+        print(f"Error: Unknown VOZA_MODE '{VOZA_MODE}'. Use 'openai' or 'local'.")
         sys.exit(1)
