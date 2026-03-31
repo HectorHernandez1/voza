@@ -109,7 +109,9 @@ def _process_audio(audio_buffer):
             return
 
         # Short phrases don't need LLM cleanup — skip to save time
-        if len(raw_text.split()) <= 15:
+        # Higher threshold for local mode (Ollama is slower than GPT-4o-mini)
+        skip_threshold = 20 if config.VOZA_MODE == "local" else 15
+        if len(raw_text.split()) <= skip_threshold:
             cleaned_text = raw_text
             print("  [Cleanup] Skipped (short phrase)")
         else:
