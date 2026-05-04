@@ -11,7 +11,7 @@ _IS_MACOS = sys.platform == "darwin"
 if not _IS_MACOS:
     _IS_WAYLAND = os.environ.get("XDG_SESSION_TYPE", "").lower() == "wayland"
     _HAS_WL_COPY = shutil.which("wl-copy") is not None
-    _HAS_YDOTOOL = shutil.which("ydotool") is not None
+    _HAS_WTYPE = shutil.which("wtype") is not None
     _HAS_XCLIP = shutil.which("xclip") is not None
     _HAS_XDOTOOL = shutil.which("xdotool") is not None
 
@@ -53,8 +53,8 @@ def _inject_linux(text: str):
 def _inject_linux_wayland(text: str):
     if not _HAS_WL_COPY:
         raise RuntimeError("wl-copy not found. Install it:\n  sudo apt install wl-clipboard")
-    if not _HAS_YDOTOOL:
-        raise RuntimeError("ydotool not found. Install it:\n  sudo apt install ydotool && sudo ydotoold &")
+    if not _HAS_WTYPE:
+        raise RuntimeError("wtype not found. Install it:\n  sudo apt install wtype")
 
     subprocess.run(
         ["wl-copy"],
@@ -63,7 +63,7 @@ def _inject_linux_wayland(text: str):
         stderr=subprocess.DEVNULL,
     )
     time.sleep(PASTE_DELAY)
-    subprocess.run(["ydotool", "key", "ctrl+v"], check=True, stderr=subprocess.DEVNULL)
+    subprocess.run(["wtype", "-M", "ctrl", "-k", "v", "-m", "ctrl"], check=True, stderr=subprocess.DEVNULL)
 
 
 def _inject_linux_x11(text: str):
