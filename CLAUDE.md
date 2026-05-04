@@ -52,7 +52,7 @@ All config via `.env` file. See `.env.example` for all options.
 **Local mode** (`VOZA_MODE=local`):
 - `WHISPER_SERVER_URL` — whisper-server endpoint (default: `http://localhost:8080`)
 - `OLLAMA_BASE_URL` — Ollama endpoint (default: `http://localhost:11434`)
-- `LOCAL_CLEANUP_MODEL` — Ollama model for text cleanup (default: `qwen3:8b`)
+- `LOCAL_CLEANUP_MODEL` — Ollama model for text cleanup (default: `gemma4:e4b`)
 
 ## Hotkeys
 

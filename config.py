@@ -17,7 +17,7 @@ CLEANUP_MODEL = "gpt-4o-mini"
 # Local mode (whisper-server + Ollama)
 WHISPER_SERVER_URL = os.getenv("WHISPER_SERVER_URL", "http://localhost:8080")
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-LOCAL_CLEANUP_MODEL = os.getenv("LOCAL_CLEANUP_MODEL", "qwen3:8b")
+LOCAL_CLEANUP_MODEL = os.getenv("LOCAL_CLEANUP_MODEL", "gemma4:e4b")
 
 HOTKEY_RECORD = "ctrl+shift+space"
 HOTKEY_QUIT = "ctrl+shift+q"
