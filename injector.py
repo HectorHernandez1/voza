@@ -53,8 +53,6 @@ def _inject_linux(text: str):
 def _inject_linux_wayland(text: str):
     if not _HAS_WL_COPY:
         raise RuntimeError("wl-copy not found. Install it:\n  sudo apt install wl-clipboard")
-    if not _HAS_WTYPE:
-        raise RuntimeError("wtype not found. Install it:\n  sudo apt install wtype")
 
     subprocess.run(
         ["wl-copy"],
@@ -63,7 +61,26 @@ def _inject_linux_wayland(text: str):
         stderr=subprocess.DEVNULL,
     )
     time.sleep(PASTE_DELAY)
-    subprocess.run(["wtype", "-M", "ctrl", "-k", "v", "-m", "ctrl"], check=True, stderr=subprocess.DEVNULL)
+    _send_ctrl_v_uinput()
+
+
+def _send_ctrl_v_uinput():
+    from evdev import UInput, ecodes as e
+
+    capabilities = {e.EV_KEY: [e.KEY_LEFTCTRL, e.KEY_V]}
+    ui = UInput(capabilities, name="voza-virtual-kbd")
+    try:
+        time.sleep(0.05)
+        ui.write(e.EV_KEY, e.KEY_LEFTCTRL, 1)
+        ui.write(e.EV_KEY, e.KEY_V, 1)
+        ui.syn()
+        time.sleep(0.02)
+        ui.write(e.EV_KEY, e.KEY_V, 0)
+        ui.write(e.EV_KEY, e.KEY_LEFTCTRL, 0)
+        ui.syn()
+        time.sleep(0.02)
+    finally:
+        ui.close()
 
 
 def _inject_linux_x11(text: str):
