@@ -38,22 +38,51 @@ processing_lock = threading.Lock()
 def _check_mic():
     """Record a short sample to verify the default mic is alive. Exit if dead."""
     print("  Checking microphone...", end=" ", flush=True)
-    try:
-        duration = 0.5  # half-second test
-        audio = sd.rec(
-            int(config.SAMPLE_RATE * duration),
-            samplerate=config.SAMPLE_RATE,
-            channels=config.CHANNELS,
-            dtype="int16",
-            device=config.AUDIO_DEVICE,
-        )
-        sd.wait()
-    except Exception as exc:
-        print(f"\n\n  ERROR: Could not access microphone: {exc}")
+
+    duration = 0.5  # half-second test
+    result = {}
+
+    def _record():
+        try:
+            audio = sd.rec(
+                int(config.SAMPLE_RATE * duration),
+                samplerate=config.SAMPLE_RATE,
+                channels=config.CHANNELS,
+                dtype="int16",
+                device=config.AUDIO_DEVICE,
+            )
+            sd.wait()
+            result["audio"] = audio
+        except Exception as exc:
+            result["error"] = exc
+
+    # Run the recording under a watchdog. A busy CoreAudio device (e.g. right
+    # after another app released the mic, or a Continuity device waking up) can
+    # make sd.wait() block forever — which would wedge startup before the
+    # hotkey listener ever starts. If it doesn't finish in time, warn and move
+    # on: config's auto-detect probe already confirmed the mic records.
+    worker = threading.Thread(target=_record, daemon=True)
+    worker.start()
+    worker.join(timeout=duration + 3.0)
+
+    if worker.is_alive():
+        print("TIMED OUT")
+        print("  WARNING: Microphone check timed out (audio device busy).")
+        print("  Continuing anyway — if dictation produces no text, close other")
+        print("  apps using the mic (or unplug/replug it) and restart.")
+        try:
+            sd.stop()
+        except Exception:
+            pass
+        return
+
+    if "error" in result:
+        print(f"\n\n  ERROR: Could not access microphone: {result['error']}")
         print("  Please check that a microphone is connected and permissions are granted.")
         print("  Then restart the app.\n")
         sys.exit(1)
 
+    audio = result["audio"]
     peak = int(np.max(np.abs(audio)))
     if peak < _SILENCE_THRESHOLD:
         print(f"SILENT (peak={peak})")
