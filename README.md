@@ -1,6 +1,6 @@
 # Voza — AI-Powered Voice-to-Text (macOS & Linux)
 
-AI-powered push-to-talk dictation. Hold a hotkey to record, then Whisper transcribes and an LLM cleans up your speech before pasting it into the active app.
+AI-powered push-to-talk dictation. Hold a hotkey to record, then Whisper transcribes and an LLM cleans up your speech — the cleaned text streams into the active app live as it's generated.
 
 Supports two modes:
 - **OpenAI** (default) — uses OpenAI Whisper API + GPT for transcription and cleanup
@@ -17,7 +17,7 @@ conda activate voza
 pip install -r requirements.txt
 
 # 3. (Linux only) Install system packages
-sudo apt install -y wl-clipboard ydotool libportaudio2
+sudo apt install -y wl-clipboard wtype libportaudio2
 
 # 4. (Linux only) Add your user to the input group for hotkey capture
 sudo usermod -aG input $USER
@@ -57,7 +57,7 @@ kill $(pgrep -f "python main.py")
 - **Hold Ctrl+Shift+Space** — Push-to-talk (hold to record, release to process)
 - **Ctrl+Shift+Q** — Quit
 
-Switch to any app, hold the hotkey, speak, then release. The cleaned text gets pasted into the focused app.
+Switch to any app, hold the hotkey, speak, then release. The cleaned text is typed into the focused app live as the LLM generates it (or pasted all at once if you set `VOZA_STREAM=false`).
 
 ## Local Mode
 
@@ -77,8 +77,8 @@ Go to **System Settings > Privacy & Security > Accessibility** and grant access 
 
 ### Linux (Wayland)
 - Uses **evdev** for global hotkey capture (works on Wayland and X11)
-- Uses **wl-clipboard** for clipboard and **ydotool** for paste simulation
-- System packages needed: `wl-clipboard`, `ydotool`, `libportaudio2`
+- Uses **wl-clipboard** for clipboard, **uinput** (via evdev) for the paste keystroke, and **wtype** for streamed typing
+- System packages needed: `wl-clipboard`, `wtype`, `libportaudio2`
 - Your user must be in the **input** group: `sudo usermod -aG input $USER`
 
 ## How It Works
@@ -86,7 +86,7 @@ Go to **System Settings > Privacy & Security > Accessibility** and grant access 
 1. Global hotkey triggers microphone recording
 2. Audio is transcribed (OpenAI Whisper API or local whisper-server)
 3. Raw transcript is cleaned up by an LLM (GPT or Ollama) — filler words removed, punctuation fixed
-4. Cleaned text is copied to the clipboard and pasted via simulated keystroke (Cmd+V on macOS, Ctrl+V on Linux)
+4. Cleaned text streams into the focused app as it's generated, typed via simulated keystrokes (osascript on macOS, wtype on Wayland, xdotool on X11). Short phrases skip cleanup and are pasted directly via the clipboard; set `VOZA_STREAM=false` to always paste the full text at once.
 
 Supports English, Spanish, and mixed-language dictation.
 
