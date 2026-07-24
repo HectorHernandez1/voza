@@ -37,6 +37,7 @@
 - [x] In-memory audio buffers — eliminated temp file disk I/O
 - [x] OGG/Opus compression via ffmpeg (falls back to WAV if ffmpeg unavailable)
 - [x] Deterministic decoding (temperature=0) on cleanup calls
+- [x] Streaming output — LLM cleanup streams and is typed into the active app as it arrives (`VOZA_STREAM`, default on)
 
 ## Future Improvements — Code Mode
 
@@ -45,4 +46,3 @@
 - [ ] **Code vocabulary** — snake_case/camelCase commands, operator dictation ("equals equals" → `==`), bracket/paren commands
 - [ ] **Indentation control** — voice commands for indent/dedent/new block
 - [ ] **Target app detection** — auto-switch to code mode when an IDE (VS Code, Xcode) is focused
-- [ ] **Streaming output** — use OpenAI streaming API to paste tokens as they arrive for faster feedback
