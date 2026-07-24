@@ -29,6 +29,7 @@ Two-stage AI pipeline with two modes:
 
 - **Push-to-talk** — hold hotkey to record, release to stop and process
 - **Clipboard + paste keystroke** for text injection — pbcopy/osascript on macOS, wl-copy/wtype on Linux
+- **Streaming output** (`VOZA_STREAM=true`, default) — LLM cleanup is streamed and typed into the active app as it arrives (osascript keystroke on macOS, wtype on Wayland, xdotool on X11); falls back to single paste when disabled or unsupported (e.g. Wayland without wtype). Short-phrase bypass and error fallbacks still use single paste.
 - **pynput Listener** on macOS for system-wide hotkeys (requires Accessibility permissions)
 - **evdev** on Linux for system-wide hotkeys (reads /dev/input directly, works on Wayland; requires `input` group)
 - **sounddevice** for audio capture (uses PortAudio, cross-platform)
@@ -48,6 +49,9 @@ All config via `.env` file. See `.env.example` for all options.
 
 **OpenAI mode** (default):
 - `OPENAI_API_KEY` (required)
+
+**Both modes:**
+- `VOZA_STREAM` — stream cleanup output by typing it as it arrives (default: `true`)
 
 **Local mode** (`VOZA_MODE=local`):
 - `WHISPER_SERVER_URL` — whisper-server endpoint (default: `http://localhost:8080`)

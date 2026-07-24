@@ -24,6 +24,11 @@ HOTKEY_QUIT = "ctrl+shift+q"
 
 PASTE_DELAY = 0.15
 
+# Stream LLM cleanup output — type text into the active app as it arrives
+# instead of one paste at the end. Falls back to paste on platforms that
+# can't type incrementally (Wayland without wtype).
+STREAM_OUTPUT = os.getenv("VOZA_STREAM", "true").lower().strip() in ("1", "true", "yes", "on")
+
 SAMPLE_RATE = 16000
 CHANNELS = 1
 

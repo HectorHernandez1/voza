@@ -19,8 +19,8 @@ else:
 import config
 from recorder import Recorder, _SILENCE_THRESHOLD, _HAS_FFMPEG
 from transcriber import transcribe
-from enhancer import enhance
-from injector import inject
+from enhancer import enhance, enhance_stream
+from injector import inject, can_stream, StreamTyper
 
 
 # ---------------------------------------------------------------------------
@@ -141,23 +141,57 @@ def _process_audio(audio_buffer):
         # Higher threshold for local mode (Ollama is slower than GPT-4o-mini)
         skip_threshold = 20 if config.VOZA_MODE == "local" else 15
         if len(raw_text.split()) <= skip_threshold:
-            cleaned_text = raw_text
             print("  [Cleanup] Skipped (short phrase)")
-        else:
+            _paste(raw_text)
+            print("Ready.")
+            return
+
+        # Streaming path: type cleaned text into the active app as it arrives
+        if config.STREAM_OUTPUT and can_stream():
+            typer = StreamTyper()
             try:
-                cleaned_text = enhance(raw_text)
+                for chunk in enhance_stream(raw_text):
+                    typer.feed(chunk)
+                typer.close()
             except Exception as exc:
+                typer.close()
+                if typer.text:
+                    print(f"Warning: Stream interrupted ({exc}). Partial text was typed.")
+                    print(f"  Raw transcript was: {raw_text}")
+                    print("Ready.")
+                    return
                 print(f"Warning: Cleanup failed ({exc}). Using raw transcript.")
-                cleaned_text = raw_text
+                _paste(raw_text)
+                print("Ready.")
+                return
 
+            if typer.text.strip():
+                print(f"  [Typed] {typer.text}")
+            else:
+                # Model returned nothing — fall back to the raw transcript
+                _paste(raw_text)
+            print("Ready.")
+            return
+
+        # Non-streaming path: full cleanup, then one paste
         try:
-            inject(cleaned_text)
-            print(f"  [Pasted] {cleaned_text}")
+            cleaned_text = enhance(raw_text)
         except Exception as exc:
-            print(f"Error: Failed to paste text: {exc}")
-            print(f"  Text was: {cleaned_text}")
+            print(f"Warning: Cleanup failed ({exc}). Using raw transcript.")
+            cleaned_text = raw_text
 
+        _paste(cleaned_text)
         print("Ready.")
+
+
+def _paste(text: str):
+    """Inject text via clipboard + paste keystroke, logging the outcome."""
+    try:
+        inject(text)
+        print(f"  [Pasted] {text}")
+    except Exception as exc:
+        print(f"Error: Failed to paste text: {exc}")
+        print(f"  Text was: {text}")
 
 
 # ---------------------------------------------------------------------------
@@ -184,6 +218,12 @@ def _print_banner():
         print(f"  Cleanup: {config.CLEANUP_MODEL}")
 
     print(f"  Compress: {'OGG/Opus (ffmpeg)' if _HAS_FFMPEG else 'Off (install ffmpeg to enable)'}")
+
+    if config.STREAM_OUTPUT:
+        stream_label = "On" if can_stream() else "Off (not supported on this setup)"
+    else:
+        stream_label = "Off (VOZA_STREAM=false)"
+    print(f"  Stream:  {stream_label}")
 
     print("=" * 50)
     print()

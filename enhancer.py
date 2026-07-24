@@ -36,3 +36,44 @@ def enhance(raw_text: str) -> str:
                 time.sleep(1)
 
     raise last_error
+
+
+def enhance_stream(raw_text: str):
+    """Stream cleaned text from the LLM as it is generated.
+
+    Yields text chunks as they arrive. Retries once (after a 1-second delay)
+    only if the failure happens before any text has been yielded — once text
+    is out, a mid-stream error propagates so the caller can handle the
+    partial output.
+    """
+    last_error = None
+    for attempt in range(2):
+        started = False
+        try:
+            stream = client.chat.completions.create(
+                model=_MODEL,
+                max_completion_tokens=256,
+                temperature=0,
+                stream=True,
+                messages=[
+                    {"role": "system", "content": CLEANUP_SYSTEM_PROMPT},
+                    {"role": "user", "content": f"[TRANSCRIPTION]\n{raw_text}\n[/TRANSCRIPTION]"},
+                ],
+            )
+            for chunk in stream:
+                if not chunk.choices:
+                    continue
+                delta = chunk.choices[0].delta.content
+                if delta:
+                    started = True
+                    yield delta
+            return
+        except Exception as e:
+            if started:
+                raise
+            last_error = e
+            if attempt == 0:
+                print(f"  Cleanup API error (retrying in 1s): {e}")
+                time.sleep(1)
+
+    raise last_error
