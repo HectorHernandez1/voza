@@ -115,10 +115,20 @@ Supports English, Spanish, and mixed-language dictation.
 
 ## Run at Login (macOS)
 
-Voza and whisper-server can run as launchd agents so everything starts at login
-(Ollama already does this via `brew services start ollama`).
+Build the Voza.app wrapper so permission prompts and System Settings show
+"Voza" instead of "python", then launch it at login:
 
-Create `~/Library/LaunchAgents/com.voza.app.plist`:
+```bash
+./macos/build-app.sh    # builds ~/Applications/Voza.app for this checkout
+open -g ~/Applications/Voza.app
+```
+
+The bundle's launcher runs the venv Python and auto-restarts it on crash;
+a clean quit (Ctrl+Shift+Q) exits for good. Logs go to `~/.voza/voza.log`.
+Rebuild after moving the repo (the repo path is baked in at build time).
+
+To start at login, either add Voza to **System Settings > General > Login
+Items**, or create `~/Library/LaunchAgents/com.voza.app.plist`:
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -129,44 +139,33 @@ Create `~/Library/LaunchAgents/com.voza.app.plist`:
     <string>com.voza.app</string>
     <key>ProgramArguments</key>
     <array>
-        <string>/path/to/voza/.venv/bin/python</string>
-        <string>-u</string>
-        <string>main.py</string>
+        <string>/usr/bin/open</string>
+        <string>-g</string>
+        <string>-a</string>
+        <string>/Users/you/Applications/Voza.app</string>
     </array>
-    <key>WorkingDirectory</key>
-    <string>/path/to/voza</string>
     <key>RunAtLoad</key>
     <true/>
     <key>KeepAlive</key>
-    <dict>
-        <key>SuccessfulExit</key>
-        <false/>
-    </dict>
-    <key>ThrottleInterval</key>
-    <integer>5</integer>
-    <key>StandardOutPath</key>
-    <string>/Users/you/.voza/voza.log</string>
-    <key>StandardErrorPath</key>
-    <string>/Users/you/.voza/voza.log</string>
+    <false/>
 </dict>
 </plist>
 ```
 
-`KeepAlive.SuccessfulExit=false` restarts Voza on crashes but leaves it stopped
-after a clean quit (Ctrl+Shift+Q) until the next login.
-
-For local mode, create `~/Library/LaunchAgents/com.voza.whisper-server.plist` the
-same way with `ProgramArguments` of `whisper-server -m <model> --host 127.0.0.1
---port 8080` and plain `KeepAlive` `true`.
+For local mode, run whisper-server the same way with a
+`~/Library/LaunchAgents/com.voza.whisper-server.plist` whose `ProgramArguments`
+run `whisper-server -m <model> --host 127.0.0.1 --port 8080`, with `KeepAlive`
+`true` (Ollama starts at login via `brew services start ollama`).
 
 ```bash
 launchctl load ~/Library/LaunchAgents/com.voza.app.plist            # start now + at login
-launchctl unload ~/Library/LaunchAgents/com.voza.app.plist          # stop + disable
+launchctl unload ~/Library/LaunchAgents/com.voza.app.plist          # disable
 tail -f ~/.voza/voza.log                                            # watch logs
 ```
 
-Grant **Microphone** and **Accessibility** permissions to the `.venv` Python
-binary when macOS prompts on first launch.
+Grant **Microphone** and **Accessibility** permissions to **Voza** when macOS
+prompts on first launch (Accessibility may need adding manually: + →
+`~/Applications/Voza.app`).
 
 ## Run as a Service (Linux)
 
