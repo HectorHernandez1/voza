@@ -84,10 +84,8 @@ All config via `.env` file. See `.env.example` for all options.
 ## Setup
 
 ```bash
-# Create conda environment
-conda create -n voza python=3.11 -y --override-channels -c conda-forge
-conda activate voza
-pip install -r requirements.txt
+# Install Python dependencies (uv creates .venv automatically)
+uv sync
 
 # Linux only — install system packages
 sudo apt install -y wl-clipboard wtype libportaudio2
@@ -104,12 +102,10 @@ sudo usermod -aG input $USER
 ./start.sh
 
 # Or directly
-conda activate voza
-python main.py
+uv run main.py
 
 # Background
-conda activate voza
-nohup python main.py > /tmp/voza.log 2>&1 &
+nohup uv run main.py > /tmp/voza.log 2>&1 &
 # Check logs: tail -f /tmp/voza.log
 # Stop: kill $(pgrep -f "python main.py")
 ```

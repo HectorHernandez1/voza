@@ -4,16 +4,12 @@
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR"
 
-# Activate Conda environment
-eval "$(conda shell.bash hook)"
-conda activate voza
-
 echo "Starting Voza..."
 echo "Press Ctrl+C twice to fully stop."
 echo
 
 while true; do
-    python main.py
+    uv run main.py
     EXIT_CODE=$?
 
     if [ $EXIT_CODE -eq 0 ]; then
