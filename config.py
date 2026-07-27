@@ -144,7 +144,11 @@ def validate():
             print("Please set it in your .env file. See .env.example for reference.")
             sys.exit(1)
     elif VOZA_MODE == "local":
-        pass  # No API key needed; whisper-server and Ollama checked at runtime
+        # No API key needed; whisper-server and Ollama checked at runtime
+        if OPENAI_API_KEY:
+            print("  Local mode — cloud fallback enabled (OPENAI_API_KEY set)")
+        else:
+            print("  Local mode — no OPENAI_API_KEY, cloud fallback disabled")
     else:
         print(f"Error: Unknown VOZA_MODE '{VOZA_MODE}'. Use 'openai' or 'local'.")
         sys.exit(1)

@@ -2,10 +2,10 @@
 
 ## Setup
 
-- [x] Create Conda environment (`conda create -n voza python=3.11 -y && conda activate voza`)
-- [x] Install dependencies (`pip install -r requirements.txt`)
+- [x] Install dependencies with uv (`uv sync` — creates `.venv` automatically)
 - [x] Configure API keys — copy `.env.example` to `.env` and add real OPENAI_API_KEY
-- [ ] Grant Accessibility permissions to Terminal app (System Settings > Privacy & Security > Accessibility)
+- [x] Set up local mode — whisper-server (large-v3-turbo) + Ollama (`gemma4:e4b`), both as login services
+- [ ] Grant Accessibility + Microphone permissions to the launching app (System Settings > Privacy & Security)
 
 ## Testing
 
@@ -38,6 +38,9 @@
 - [x] OGG/Opus compression via ffmpeg (falls back to WAV if ffmpeg unavailable)
 - [x] Deterministic decoding (temperature=0) on cleanup calls
 - [x] Streaming output — LLM cleanup streams and is typed into the active app as it arrives (`VOZA_STREAM`, default on)
+- [x] uv project workflow — `pyproject.toml` + `uv.lock`, `uv run main.py` (replaced conda + requirements.txt)
+- [x] Cloud fallback — local mode falls back to OpenAI APIs when whisper-server/Ollama are unreachable (tested)
+- [x] Run at login on macOS — launchd agents for Voza, whisper-server, and Ollama
 
 ## Future Improvements — Code Mode
 

@@ -1,25 +1,29 @@
 import time
 
+from api_client import client, fallback_client
 from config import VOZA_MODE, WHISPER_MODEL, WHISPER_SERVER_URL
-
-if VOZA_MODE == "openai":
-    from api_client import client
 
 
 def transcribe(audio_buffer) -> str:
     """Transcribe audio and return raw text. Routes to OpenAI or whisper-server."""
     if VOZA_MODE == "local":
-        return _transcribe_local(audio_buffer)
-    return _transcribe_openai(audio_buffer)
+        try:
+            return _transcribe_local(audio_buffer)
+        except Exception as e:
+            if fallback_client is None:
+                raise
+            print(f"  whisper-server unavailable, falling back to OpenAI: {e}")
+            return _transcribe_openai(audio_buffer, fallback_client)
+    return _transcribe_openai(audio_buffer, client)
 
 
-def _transcribe_openai(audio_buffer) -> str:
+def _transcribe_openai(audio_buffer, api) -> str:
     """Send audio buffer to OpenAI Whisper API with one retry."""
     last_error = None
     for attempt in range(2):
         try:
             audio_buffer.seek(0)
-            response = client.audio.transcriptions.create(
+            response = api.audio.transcriptions.create(
                 model=WHISPER_MODEL,
                 file=audio_buffer,
             )

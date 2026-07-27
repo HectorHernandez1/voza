@@ -4,7 +4,7 @@ AI-powered push-to-talk dictation. Hold a hotkey to record, then Whisper transcr
 
 Supports two modes:
 - **OpenAI** (default) — uses OpenAI Whisper API + GPT for transcription and cleanup
-- **Local** — uses whisper-server (whisper.cpp) + Ollama for fully local, offline processing
+- **Local** — uses whisper-server (whisper.cpp) + Ollama for fully local, offline processing. If a local server is unreachable and an `OPENAI_API_KEY` is set, Voza automatically falls back to the OpenAI APIs for that request.
 
 ## Setup
 
@@ -59,9 +59,38 @@ To run fully local without an OpenAI API key:
 
 1. Set `VOZA_MODE=local` in your `.env` file
 2. Run **whisper-server** (from whisper.cpp) with your model loaded — it should be listening on `http://localhost:8080`
-3. Run **Ollama** with your cleanup model pulled (e.g., `ollama pull qwen3:8b`)
+3. Run **Ollama** with your cleanup model pulled (e.g., `ollama pull gemma4:e4b`)
 
-See `.env.example` for all configurable URLs and model names.
+On macOS, both are one brew command away:
+
+```bash
+brew install ollama whisper-cpp
+brew services start ollama
+ollama pull gemma4:e4b
+
+# Download a Whisper model (large-v3-turbo recommended on Apple Silicon)
+mkdir -p ~/.voza/models
+curl -L -o ~/.voza/models/ggml-large-v3-turbo.bin \
+  https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo.bin
+whisper-server -m ~/.voza/models/ggml-large-v3-turbo.bin --host 127.0.0.1 --port 8080
+```
+
+See `.env.example` for all configurable URLs and model names. If `OPENAI_API_KEY`
+is also set in `.env`, local mode falls back to the OpenAI APIs whenever
+whisper-server or Ollama is unreachable — dictation keeps working even if a
+local server is down.
+
+## Project Structure
+
+- `main.py` — entry point: push-to-talk hotkey listener, pipeline orchestration
+- `recorder.py` — microphone capture (sounddevice, in-memory WAV/OGG)
+- `transcriber.py` — Whisper API or whisper-server transcription (with cloud fallback)
+- `enhancer.py` — LLM cleanup, streaming and non-streaming (with cloud fallback)
+- `injector.py` — cross-platform text injection (clipboard paste + live typing)
+- `api_client.py` — shared OpenAI/Ollama clients
+- `config.py` — .env loading, validation, defaults, system prompt
+- `start.sh` — launch script with auto-restart on crash
+- `pyproject.toml` / `uv.lock` — dependencies (uv project)
 
 ## Platform Notes
 
@@ -83,6 +112,61 @@ Go to **System Settings > Privacy & Security > Accessibility** and grant access 
 4. Cleaned text streams into the focused app as it's generated, typed via simulated keystrokes (osascript on macOS, wtype on Wayland, xdotool on X11). Short phrases skip cleanup and are pasted directly via the clipboard; set `VOZA_STREAM=false` to always paste the full text at once.
 
 Supports English, Spanish, and mixed-language dictation.
+
+## Run at Login (macOS)
+
+Voza and whisper-server can run as launchd agents so everything starts at login
+(Ollama already does this via `brew services start ollama`).
+
+Create `~/Library/LaunchAgents/com.voza.app.plist`:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.voza.app</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/path/to/voza/.venv/bin/python</string>
+        <string>-u</string>
+        <string>main.py</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>/path/to/voza</string>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
+    <key>ThrottleInterval</key>
+    <integer>5</integer>
+    <key>StandardOutPath</key>
+    <string>/Users/you/.voza/voza.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/you/.voza/voza.log</string>
+</dict>
+</plist>
+```
+
+`KeepAlive.SuccessfulExit=false` restarts Voza on crashes but leaves it stopped
+after a clean quit (Ctrl+Shift+Q) until the next login.
+
+For local mode, create `~/Library/LaunchAgents/com.voza.whisper-server.plist` the
+same way with `ProgramArguments` of `whisper-server -m <model> --host 127.0.0.1
+--port 8080` and plain `KeepAlive` `true`.
+
+```bash
+launchctl load ~/Library/LaunchAgents/com.voza.app.plist            # start now + at login
+launchctl unload ~/Library/LaunchAgents/com.voza.app.plist          # stop + disable
+tail -f ~/.voza/voza.log                                            # watch logs
+```
+
+Grant **Microphone** and **Accessibility** permissions to the `.venv` Python
+binary when macOS prompts on first launch.
 
 ## Run as a Service (Linux)
 
@@ -110,7 +194,7 @@ WantedBy=default.target
 EOF
 ```
 
-Update the paths in the file to match your setup. Find your conda env path with `conda info --envs | grep voza`.
+Update the paths in the file to match your setup.
 
 ### 2. Enable and start
 

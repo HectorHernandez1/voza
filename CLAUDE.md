@@ -24,6 +24,7 @@ Two-stage AI pipeline with two modes:
 - `injector.py` — Cross-platform text injection (pbcopy/osascript on macOS, wl-copy/wtype on Linux)
 - `config.py` — Loads .env, validates config, holds defaults and system prompt
 - `start.sh` — Launch script with auto-restart on crash
+- `pyproject.toml` / `uv.lock` — Dependencies (uv project; run with `uv run main.py`)
 
 ## Key Design Decisions
 
@@ -40,6 +41,7 @@ Two-stage AI pipeline with two modes:
 - **OGG/Opus compression** — if ffmpeg is installed, audio is compressed before upload (~90% smaller)
 - **No language parameter** on Whisper — auto-detects English/Spanish
 - **Fallback** — if LLM cleanup fails or returns empty, raw Whisper transcript is pasted instead
+- **Cloud fallback in local mode** — if whisper-server or Ollama is unreachable (after one retry) and OPENAI_API_KEY is set, that request falls back to the OpenAI APIs; without a key, local errors propagate as before
 - **Dual mode** — `VOZA_MODE=openai` uses OpenAI APIs, `VOZA_MODE=local` uses whisper-server + Ollama
 - Recordings < 0.3s are ignored (accidental hotkey press)
 
