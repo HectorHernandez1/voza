@@ -88,3 +88,10 @@ echo "Start at login:       add Voza to System Settings > General > Login Items,
 echo "                      or use a launchd agent that runs: /usr/bin/open -g -a '$APP'"
 echo "Grant permissions to 'Voza' (not python) when macOS prompts:"
 echo "  System Settings > Privacy & Security > Microphone / Accessibility"
+echo
+echo "IMPORTANT: always launch Voza through this app bundle (open/Login Items)."
+echo "Launching main.py directly from launchd registers the bare python binary"
+echo "with macOS permissions, which shows up as 'python3.11 / unidentified"
+echo "developer' in System Settings. If old 'python' entries exist there,"
+echo "remove them with the minus (-) button under Privacy & Security >"
+echo "Accessibility and > Microphone — they are stale once Voza.app is granted."

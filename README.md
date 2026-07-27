@@ -167,6 +167,12 @@ Grant **Microphone** and **Accessibility** permissions to **Voza** when macOS
 prompts on first launch (Accessibility may need adding manually: + →
 `~/Applications/Voza.app`).
 
+Always launch Voza through the app bundle (`open`, Login Items, or the agent
+above) — launching `main.py` directly from launchd registers the bare Python
+binary with macOS permissions, which shows up as "python3.11 / unidentified
+developer" in System Settings. Remove any stale "python" entries there with
+the minus (−) button once Voza is granted.
+
 ## Run as a Service (Linux)
 
 To have Voza start automatically when you log in, set it up as a systemd user service.
