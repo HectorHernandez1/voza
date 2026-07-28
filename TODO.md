@@ -42,6 +42,25 @@
 - [x] Cloud fallback — local mode falls back to OpenAI APIs when whisper-server/Ollama are unreachable (tested)
 - [x] Run at login on macOS — launchd agents for Voza, whisper-server, and Ollama
 
+## Future Project — Standalone App Distribution
+
+Goal: turn Voza into an installable Mac app others can use.
+
+- [ ] **Phase 1 — Developer ID app (outside App Store, keeps all features)**
+  - Apple Developer Program membership ($99/yr)
+  - Bundle the app (briefcase/py2app short-term, or native rewrite), sign with Developer ID, notarize
+  - Distribute via website/GitHub; Sparkle for auto-updates
+  - Keeps auto-typing into other apps — no sandbox restrictions
+- [ ] **Phase 2 (optional) — Mac App Store version**
+  - Hard constraint: App Sandbox ignores CGEventPost, so auto-typing into other
+    apps is impossible — output must become clipboard + manual Cmd+V (this is
+    why superwhisper/Wispr Flow distribute outside the store)
+  - Requires full Swift rewrite: AVAudioEngine (capture), Apple Speech framework
+    (on-device transcription), Foundation Models framework (on-device cleanup,
+    macOS 26+) — would eliminate the whisper-server and Ollama dependencies
+  - Sandbox entitlements (mic, network), privacy policy, App Review
+  - Estimated 6–10 weeks side-project time
+
 ## Future Improvements — Code Mode
 
 - [ ] **Mode toggle hotkey** — second hotkey to switch between prose mode and code mode
