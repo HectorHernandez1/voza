@@ -4,6 +4,7 @@
 
 import sys
 import threading
+import time
 
 import numpy as np
 import sounddevice as sd
@@ -29,6 +30,39 @@ from injector import inject, can_stream, StreamTyper
 
 recorder = Recorder()
 processing_lock = threading.Lock()
+
+_PROCESS_START = time.monotonic()
+# If a hang recurs within this many seconds of launch, don't loop forever: stop
+# and let the user restart manually. A fresh process almost always clears it.
+_MIN_UPTIME_BEFORE_RESTART = 30
+
+
+def _restart_on_hang(reason):
+    """Called when the audio device deadlocks mid-recording.
+
+    CoreAudio keeps the mic open until the process dies, so exit and let the
+    launch wrapper (start.sh / Voza.app) respawn a fresh instance."""
+    import os as _os
+    print("\n" + reason, flush=True)
+
+    # The hang fires ~2s after the hotkey was released, so the just-recorded
+    # dictation is usually still mid-transcription. Wait (bounded) for the
+    # pipeline to finish pasting before killing the process.
+    if processing_lock.acquire(timeout=30):
+        processing_lock.release()
+    else:
+        print("In-flight dictation didn't finish in 30s; restarting anyway.",
+              flush=True)
+
+    if time.monotonic() - _PROCESS_START < _MIN_UPTIME_BEFORE_RESTART:
+        print("Not auto-restarting (hang too soon after launch). "
+              "Restart Voza manually.", flush=True)
+        _os._exit(0)
+    print("Restarting Voza...", flush=True)
+    _os._exit(1)
+
+
+recorder.on_hang = _restart_on_hang
 
 
 # ---------------------------------------------------------------------------
@@ -80,7 +114,9 @@ def _check_mic():
         print(f"\n\n  ERROR: Could not access microphone: {result['error']}")
         print("  Please check that a microphone is connected and permissions are granted.")
         print("  Then restart the app.\n")
-        sys.exit(1)
+        # Exit 0: a restart won't fix a missing mic/permissions, and a non-zero
+        # exit would make the launch wrapper respawn us in a loop.
+        sys.exit(0)
 
     audio = result["audio"]
     peak = int(np.max(np.abs(audio)))
@@ -98,7 +134,9 @@ def _check_mic():
         print("    3. Unplug and replug your microphone")
         print("  Then restart the app.")
         print()
-        sys.exit(1)
+        # Exit 0: a dead mic won't come back on its own, and a non-zero exit
+        # would make the launch wrapper respawn us in a loop.
+        sys.exit(0)
     else:
         print(f"OK (peak={peak})")
 

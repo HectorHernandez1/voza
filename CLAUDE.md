@@ -18,7 +18,7 @@ Two-stage AI pipeline with two modes:
 
 - `main.py` — Entry point, push-to-talk hotkey listener (pynput on macOS, evdev on Linux), orchestrates the pipeline
 - `api_client.py` — Shared AI client: OpenAI client (mode=openai) or Ollama-compatible client (mode=local)
-- `recorder.py` — Microphone capture via sounddevice (16kHz mono int16, in-memory WAV/OGG)
+- `recorder.py` — Microphone capture via sounddevice (16kHz mono int16, in-memory WAV/OGG); tears down the input stream off-thread with a deadlock watchdog
 - `transcriber.py` — Transcription: OpenAI Whisper API (mode=openai) or whisper-server HTTP API (mode=local)
 - `enhancer.py` — LLM text cleanup with bilingual system prompt: GPT (mode=openai) or Ollama (mode=local)
 - `injector.py` — Cross-platform text injection (pbcopy/osascript on macOS, wl-copy/wtype on Linux)
@@ -44,6 +44,9 @@ Two-stage AI pipeline with two modes:
 - **Cloud fallback in local mode** — if whisper-server or Ollama is unreachable (after one retry) and OPENAI_API_KEY is set, that request falls back to the OpenAI APIs; without a key, local errors propagate as before
 - **Dual mode** — `VOZA_MODE=openai` uses OpenAI APIs, `VOZA_MODE=local` uses whisper-server + Ollama
 - Recordings < 0.3s are ignored (accidental hotkey press)
+- **Startup dead-mic check** — before the hotkey listener starts, records a 0.5s sample and exits if the mic is silent/dead (peak amplitude < `_SILENCE_THRESHOLD` in recorder.py). The threshold is tuned low (10) because a working built-in mic in a quiet room measures peaks of ~17–52 (MacBook Air) while a truly dead/disconnected mic reads ≈0. Fatal mic-check failures exit with code **0** so the launch wrapper stays quit instead of restart-looping on a condition a restart can't fix (dead mic, missing permissions).
+- **Off-thread stream teardown** — `Recorder.stop()` captures the audio and returns immediately; the PortAudio input stream is stopped/closed on a background thread so the hotkey listener never blocks on device I/O.
+- **Auto-restart on audio hang** — `Pa_StopStream` can deadlock inside CoreAudio's `HALB_Mutex` (typically after sleep/wake or a device change during a long session), which pins the mic open and freezes the listener. A watchdog (`_STOP_TIMEOUT`, 2s) detects the stall and calls `on_hang` → `main._restart_on_hang`, which first waits (up to 30s) for any in-flight dictation to finish pasting, then exits with code 1 so the launch wrapper (`start.sh` / `Voza.app`) respawns a fresh instance — process death is what releases the mic. A circuit breaker skips the restart if the hang occurs within 30s of launch (avoids infinite restart loops).
 
 ## Configuration
 
@@ -69,6 +72,7 @@ All config via `.env` file. See `.env.example` for all options.
 
 ### macOS
 - Requires Accessibility permissions: System Settings > Privacy & Security > Accessibility
+- Long-running sessions can hit a CoreAudio deadlock when stopping a recording (usually after sleep/wake or a device change). Voza detects it and auto-restarts — see "Auto-restart on audio hang" under Key Design Decisions.
 
 ### Linux (Wayland)
 - Uses evdev for global hotkey capture (works on Wayland and X11)
@@ -111,3 +115,5 @@ nohup uv run main.py > /tmp/voza.log 2>&1 &
 # Check logs: tail -f /tmp/voza.log
 # Stop: kill $(pgrep -f "python main.py")
 ```
+
+The launch wrappers (`start.sh`, `Voza.app`'s `voza.sh`) auto-restart on a **non-zero** exit and stay quit on `0`. This is load-bearing for the audio-deadlock recovery: a CoreAudio hang exits with code 1 so a fresh instance is spawned. Run via `start.sh` or `Voza.app` to get the auto-restart; a bare `uv run main.py` won't self-recover.

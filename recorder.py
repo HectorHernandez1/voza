@@ -9,7 +9,16 @@ import sounddevice as sd
 
 from config import SAMPLE_RATE, CHANNELS, AUDIO_DEVICE
 
-_SILENCE_THRESHOLD = 100  # peak amplitude below this = mic is silent/dead
+# Peak amplitude below this = mic is silent/dead. A working built-in mic in a
+# quiet room measures peaks of ~17-52 (MacBook Air), a dead/disconnected mic ~0,
+# so keep this well under the quiet-room floor.
+_SILENCE_THRESHOLD = 10
+
+# Max seconds to wait for PortAudio to tear down a recording stream.
+# Pa_StopStream can deadlock inside CoreAudio's HALB_Mutex (often after
+# sleep/wake or a device change mid-session); bounding the wait keeps a hang
+# from freezing the hotkey listener and green-lighting the mic indefinitely.
+_STOP_TIMEOUT = 2.0
 
 # Check once at import time whether ffmpeg is available for OGG compression
 _HAS_FFMPEG = shutil.which("ffmpeg") is not None
@@ -22,6 +31,7 @@ class Recorder:
         self._stream = None
         self._lock = threading.Lock()
         self._last_stop_reason = None
+        self.on_hang = None  # optional callback(reason) if stream teardown deadlocks
 
     @property
     def last_stop_reason(self):
@@ -51,22 +61,58 @@ class Recorder:
         if self._recording:
             self._frames.append(indata.copy())
 
+    def _safe_teardown(self, stream):
+        """Stop+close a PortAudio stream, swallowing errors (best-effort)."""
+        try:
+            stream.stop()
+        except Exception:
+            pass
+        try:
+            stream.close()
+        except Exception:
+            pass
+
+    def _watch_teardown(self, teardown):
+        """If teardown hasn't finished within _STOP_TIMEOUT, treat it as a hang."""
+        teardown.join(timeout=_STOP_TIMEOUT)
+        if teardown.is_alive():
+            reason = ("Audio device deadlocked (CoreAudio hang) — the mic is "
+                      "stuck open until the process exits.")
+            if self.on_hang is not None:
+                self.on_hang(reason)
+            else:
+                print("Warning: " + reason + " Quit and restart Voza.")
+
     def stop(self):
         """Stop recording and return an in-memory audio buffer, or None if too short."""
         with self._lock:
             if not self._recording:
                 return None
             self._recording = False
-            if self._stream is not None:
-                self._stream.stop()
-                self._stream.close()
-                self._stream = None
+            stream = self._stream
+            self._stream = None
+            frames = self._frames
+            self._frames = []
 
-        if not self._frames:
+        # Tear down the input stream off the hotkey-listener thread so the
+        # pipeline stays snappy. A watchdog verifies teardown actually finished:
+        # Pa_StopStream can deadlock inside CoreAudio's HALB_Mutex (often after
+        # sleep/wake), pinning the mic open until the process exits. If that
+        # happens the watchdog calls on_hang (e.g. to auto-restart the app).
+        if stream is not None:
+            teardown = threading.Thread(
+                target=self._safe_teardown, args=(stream,), daemon=True
+            )
+            teardown.start()
+            threading.Thread(
+                target=self._watch_teardown, args=(teardown,), daemon=True
+            ).start()
+
+        if not frames:
             self._last_stop_reason = "short"
             return None
 
-        audio = np.concatenate(self._frames, axis=0)
+        audio = np.concatenate(frames, axis=0)
 
         # Check if audio is essentially silent (dead/wrong mic)
         peak = int(np.max(np.abs(audio)))
