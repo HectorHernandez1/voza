@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 
 import sounddevice as sd
 
@@ -37,8 +38,8 @@ CHANNELS = 1
 _AUDIO_DEVICE_RAW = "auto"
 
 
-def _probe_best_device():
-    """Record a short sample on every input device and return the index with the highest peak."""
+def _probe_devices_once():
+    """Record a short sample on every input device; return (idx, name, peak) of the loudest."""
     import numpy as np
 
     devs = sd.query_devices()
@@ -70,6 +71,43 @@ def _probe_best_device():
                 best_name = d['name']
         except Exception:
             continue  # skip devices that error out
+
+    return best_idx, best_name, best_peak
+
+
+# When started at login (systemd user service), the probe can run before the
+# audio stack and USB sound cards are up — every device then reads exactly 0.
+# A working mic always shows a nonzero noise floor, so an all-zero sweep means
+# "not ready yet", not "quiet room": wait, re-enumerate, and try again.
+_PROBE_RETRIES = 5
+_PROBE_RETRY_DELAY = 2.0  # seconds
+
+
+def _probe_best_device():
+    """Record a short sample on every input device and return the index with the highest peak."""
+    best_idx = None
+    best_name = ""
+    best_peak = -1
+
+    for attempt in range(_PROBE_RETRIES):
+        best_idx, best_name, best_peak = _probe_devices_once()
+        if best_idx is not None and best_peak > 0:
+            break
+        if attempt < _PROBE_RETRIES - 1:
+            print(f"  All input devices silent — audio stack may still be starting, "
+                  f"retrying ({attempt + 1}/{_PROBE_RETRIES - 1})...")
+            time.sleep(_PROBE_RETRY_DELAY)
+            # PortAudio snapshots the device list at init; restart it so cards
+            # that registered after startup become visible. Linux only: the
+            # boot race is a systemd phenomenon, and restarting PortAudio on
+            # macOS pokes CoreAudio in ways this project has been bitten by
+            # before (see the HALB_Mutex deadlock notes).
+            if sys.platform != "darwin":
+                try:
+                    sd._terminate()
+                    sd._initialize()
+                except Exception:
+                    pass  # keep the old device list; the retry still re-probes
 
     if best_idx is not None:
         print(f"  Auto-detected mic: [{best_idx}] {best_name} (peak={best_peak})")
