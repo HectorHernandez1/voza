@@ -134,6 +134,18 @@ def _check_mic():
     if peak < _SILENCE_THRESHOLD:
         print(f"SILENT (peak={peak})")
         print()
+        # Every device reading exactly 0 is the boot-race signature (a working
+        # mic always has a nonzero noise floor, and a dead one still enumerates)
+        # — the audio stack likely isn't up yet, so this WILL fix itself. Exit
+        # non-zero so systemd's Restart=on-failure retries; the unit's
+        # StartLimitBurst bounds the loop if the mic really is dead. Linux only:
+        # the race is a systemd phenomenon, and on macOS a non-zero exit would
+        # make the launch wrapper respawn forever on a truly muted mic.
+        if not _IS_MACOS and config.PROBE_ALL_SILENT:
+            print("  All input devices read zero — audio stack is likely still starting.")
+            print("  Exiting with status 1 so the service manager retries shortly.")
+            print()
+            sys.exit(1)
         print("  WARNING: Microphone appears dead or muted.")
         print("  Possible fixes:")
         if _IS_MACOS:

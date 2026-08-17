@@ -82,9 +82,15 @@ def _probe_devices_once():
 _PROBE_RETRIES = 5
 _PROBE_RETRY_DELAY = 2.0  # seconds
 
+# True when auto-detect exhausted its retries with every device still reading
+# exactly 0 — the boot-race signature. main._check_mic uses this to pick an
+# exit code: transient (audio stack not up yet) vs. genuinely dead mic.
+PROBE_ALL_SILENT = False
+
 
 def _probe_best_device():
     """Record a short sample on every input device and return the index with the highest peak."""
+    global PROBE_ALL_SILENT
     best_idx = None
     best_name = ""
     best_peak = -1
@@ -109,6 +115,7 @@ def _probe_best_device():
                 except Exception:
                     pass  # keep the old device list; the retry still re-probes
 
+    PROBE_ALL_SILENT = best_peak <= 0
     if best_idx is not None:
         print(f"  Auto-detected mic: [{best_idx}] {best_name} (peak={best_peak})")
     return best_idx
