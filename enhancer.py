@@ -13,6 +13,13 @@ def _messages(raw_text: str):
     ]
 
 
+def _max_tokens(raw_text: str) -> int:
+    # Cleanup output is the same length as the input or shorter. English/Spanish
+    # runs ~4 chars/token, so chars/2 gives ~2x headroom — a fixed cap silently
+    # truncated long dictations mid-sentence.
+    return max(256, len(raw_text) // 2)
+
+
 def enhance(raw_text: str) -> str:
     """Send raw transcript to LLM for cleanup.
 
@@ -35,7 +42,7 @@ def _complete(api, model, raw_text: str) -> str:
         try:
             response = api.chat.completions.create(
                 model=model,
-                max_completion_tokens=256,
+                max_completion_tokens=_max_tokens(raw_text),
                 temperature=0,
                 messages=_messages(raw_text),
             )
@@ -82,7 +89,7 @@ def _stream(api, model, raw_text: str):
         try:
             stream = api.chat.completions.create(
                 model=model,
-                max_completion_tokens=256,
+                max_completion_tokens=_max_tokens(raw_text),
                 temperature=0,
                 stream=True,
                 messages=_messages(raw_text),

@@ -27,16 +27,23 @@ _HAS_FFMPEG = shutil.which("ffmpeg") is not None
 class Recorder:
     def __init__(self):
         self._frames = []
+        self._active = [False]
         self._recording = False
         self._stream = None
         self._lock = threading.Lock()
         self._last_stop_reason = None
+        self._last_duration = 0.0
         self.on_hang = None  # optional callback(reason) if stream teardown deadlocks
 
     @property
     def last_stop_reason(self):
         """Why the last stop() returned None: 'silent', 'short', or None (success)."""
         return self._last_stop_reason
+
+    @property
+    def last_duration(self):
+        """Seconds of audio captured by the last successful stop()."""
+        return self._last_duration
 
     @property
     def is_recording(self):
@@ -46,20 +53,28 @@ class Recorder:
         with self._lock:
             if self._recording:
                 return
-            self._frames = []
+            # Bind this recording's frame list and active flag into the stream
+            # callback via a closure. A previous stream whose teardown hung can
+            # keep firing its callback; it holds references to its own (dead)
+            # list and flag, so it can never write into a newer recording.
+            frames = []
+            active = [True]
+
+            def _callback(indata, nframes, time_info, status):
+                if active[0]:
+                    frames.append(indata.copy())
+
+            self._frames = frames
+            self._active = active
             self._recording = True
             self._stream = sd.InputStream(
                 samplerate=SAMPLE_RATE,
                 channels=CHANNELS,
                 dtype="int16",
                 device=AUDIO_DEVICE,
-                callback=self._callback,
+                callback=_callback,
             )
             self._stream.start()
-
-    def _callback(self, indata, frames, time_info, status):
-        if self._recording:
-            self._frames.append(indata.copy())
 
     def _safe_teardown(self, stream):
         """Stop+close a PortAudio stream, swallowing errors (best-effort)."""
@@ -89,6 +104,7 @@ class Recorder:
             if not self._recording:
                 return None
             self._recording = False
+            self._active[0] = False  # stop the callback appending to `frames`
             stream = self._stream
             self._stream = None
             frames = self._frames
@@ -127,6 +143,7 @@ class Recorder:
             return None
 
         self._last_stop_reason = None
+        self._last_duration = len(audio) / SAMPLE_RATE
         return self._to_audio_buffer(audio)
 
     def _to_wav_bytes(self, audio: np.ndarray) -> io.BytesIO:

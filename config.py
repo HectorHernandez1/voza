@@ -35,7 +35,7 @@ CHANNELS = 1
 
 # Audio device — set to device name (partial match), index number, or "auto".
 # "auto" (default) probes all mics and picks the loudest one.
-_AUDIO_DEVICE_RAW = "auto"
+_AUDIO_DEVICE_RAW = os.getenv("VOZA_AUDIO_DEVICE", "auto")
 
 
 def _probe_devices_once():
@@ -122,7 +122,7 @@ def _probe_best_device():
 
 
 def _resolve_audio_device():
-    """Resolve AUDIO_DEVICE env var to a device index, or auto-detect the best mic."""
+    """Resolve VOZA_AUDIO_DEVICE env var to a device index, or auto-detect the best mic."""
     raw = _AUDIO_DEVICE_RAW.strip().lower()
 
     # Auto-detect: probe all devices and pick the loudest

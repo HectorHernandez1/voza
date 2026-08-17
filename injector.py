@@ -65,9 +65,11 @@ class StreamTyper:
         self._buffer = self._buffer[cut + 1:]
 
     def close(self):
-        if self._buffer:
-            self._type(self._buffer)
-            self._buffer = ""
+        # Clear the buffer before typing: if _type fails partway, a second
+        # close() (e.g. from an error handler) must not retype the same text.
+        pending, self._buffer = self._buffer, ""
+        if pending:
+            self._type(pending)
 
     def _type(self, text: str):
         if self._first:

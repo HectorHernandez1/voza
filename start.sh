@@ -5,7 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR"
 
 echo "Starting Voza..."
-echo "Press Ctrl+C twice to fully stop."
+echo "Press Ctrl+C to stop."
 echo
 
 while true; do
@@ -14,6 +14,13 @@ while true; do
 
     if [ $EXIT_CODE -eq 0 ]; then
         echo "Voza exited normally."
+        break
+    fi
+
+    # 130 = SIGINT (Ctrl+C before the app's own handler exits 0) — a stop
+    # request, not a crash; don't restart.
+    if [ $EXIT_CODE -eq 130 ]; then
+        echo "Voza interrupted."
         break
     fi
 

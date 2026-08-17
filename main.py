@@ -175,8 +175,13 @@ _HALLUCINATION_WORDS = {
     "so", "and", "but", "or", "it", "he", "she",
 }
 
+# Only treat a transcript as a hallucination when the recording was this long:
+# a deliberate "Okay." takes ~1s, while silence-derived hallucinations come from
+# longer holds. Below this, short answers like "yes"/"no" paste normally.
+_HALLUCINATION_MIN_DURATION = 3.0
 
-def _process_audio(audio_buffer):
+
+def _process_audio(audio_buffer, duration):
     """Run the Whisper → LLM → paste pipeline."""
     with processing_lock:
         raw_text = None
@@ -190,9 +195,11 @@ def _process_audio(audio_buffer):
             print("Ready.")
             return
 
-        # Guard against Whisper hallucinations from silent/bad audio
+        # Guard against Whisper hallucinations from silent/bad audio: a lone
+        # filler word out of a long recording means the audio was noise, but a
+        # quick press saying "okay" is real dictation and must paste.
         stripped = raw_text.strip().strip(".!?,").lower()
-        if stripped in _HALLUCINATION_WORDS:
+        if stripped in _HALLUCINATION_WORDS and duration >= _HALLUCINATION_MIN_DURATION:
             print("  [Warning] Likely mic issue — transcript looks like a hallucination.")
             print("  Check your audio input device. Skipping paste.")
             print("Ready.")
@@ -215,7 +222,10 @@ def _process_audio(audio_buffer):
                     typer.feed(chunk)
                 typer.close()
             except Exception as exc:
-                typer.close()
+                try:
+                    typer.close()
+                except Exception:
+                    pass  # typing is already broken; keep the fallback path alive
                 if typer.text:
                     print(f"Warning: Stream interrupted ({exc}). Partial text was typed.")
                     print(f"  Raw transcript was: {raw_text}")
@@ -380,7 +390,9 @@ if _IS_MACOS:
                     return
 
                 threading.Thread(
-                    target=_process_audio, args=(audio_buffer,), daemon=True
+                    target=_process_audio,
+                    args=(audio_buffer, recorder.last_duration),
+                    daemon=True,
                 ).start()
             else:
                 pressed_keys.discard(key)
@@ -437,14 +449,15 @@ if not _IS_MACOS:
 
     def _find_keyboard_device() -> evdev.InputDevice:
         """Find the first keyboard device in /dev/input/event*."""
-        devices = [evdev.InputDevice(path) for path in evdev.list_devices()]
-        for dev in devices:
+        for path in evdev.list_devices():
+            dev = evdev.InputDevice(path)
             caps = dev.capabilities()
             # EV_KEY = 1; look for KEY_SPACE and KEY_A as keyboard markers
             if 1 in caps:
                 key_codes = set(caps[1])
                 if e.KEY_SPACE in key_codes and e.KEY_A in key_codes:
                     return dev
+            dev.close()
         raise RuntimeError(
             "No keyboard device found in /dev/input/.\n"
             "Ensure your user is in the 'input' group:\n"
@@ -500,7 +513,9 @@ if not _IS_MACOS:
                             continue
 
                         threading.Thread(
-                            target=_process_audio, args=(audio_buffer,), daemon=True
+                            target=_process_audio,
+                            args=(audio_buffer, recorder.last_duration),
+                            daemon=True,
                         ).start()
                     else:
                         pressed.discard(code)
